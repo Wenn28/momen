@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "firebase": "^13.4.0"
+  },
+  "name": "p1",
+  "version": "1.0.0",
+  "description": "Aplikasi upload foto acara. HTML, CSS, dan JavaScript murni, tanpa build step, **Rp0 tanpa kartu kredit**.",
+  "main": "firebase-config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

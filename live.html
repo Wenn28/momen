@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Live Screen</title>
+  <style>
+    /* Dasar: layar penuh hitam untuk proyektor */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #000; color: #eee; font-family: system-ui, sans-serif; }
+    [hidden] { display: none !important; }
+
+    /* Form login admin */
+    .login { max-width: 360px; margin: 10vh auto; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+    .login input, .login button { padding: 14px; font-size: 1rem; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #eee; }
+    .login button { background: #f5c542; color: #111; border: 0; font-weight: 600; cursor: pointer; }
+    .error { color: #ff6b6b; min-height: 1.5em; margin: 0; }
+
+    /* Tata letak live: header, foto utama, strip thumbnail */
+    .live { height: 100%; display: flex; flex-direction: column; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; font-size: 1.2rem; }
+    #main { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; }
+    .strip { display: flex; gap: 8px; padding: 10px 20px; overflow-x: auto; height: 16vh; }
+    .strip img { height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; flex: none; }
+    .empty { flex: 1; display: grid; place-items: center; color: #777; font-size: 1.5rem; }
+  </style>
+</head>
+<body>
+  <!-- Layar login admin -->
+  <form class="login" id="loginView" hidden>
+    <h1>Live Screen</h1>
+    <input type="email" id="email" placeholder="Email admin" required autocomplete="username">
+    <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+    <button type="submit">Masuk</button>
+    <p class="error" id="loginMsg" role="alert"></p>
+  </form>
+
+  <!-- Layar live: foto terbaru besar + 12 thumbnail -->
+  <section class="live" id="liveView" hidden>
+    <header>
+      <strong>Momen Live</strong>
+      <span id="counter">0 foto terbaru</span>
+    </header>
+    <img id="main" alt="Foto terbaru" hidden>
+    <div class="empty" id="empty">Menunggu foto pertama…</div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <script type="module">
+    // Import Firebase SDK modular dari CDN gstatic
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { firebaseConfig, ADMIN_UID, EVENT_ID } from "./firebase-config.js";
+
+    // Inisialisasi layanan Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Referensi elemen UI
+    const $ = (id) => document.getElementById(id);
+
+    let unsubscribe = null; // penghenti listener realtime
+
+    // URL gambar dari Google Drive (file disetel "siapa saja dengan link")
+    // shortcut: endpoint thumbnail Drive tidak resmi dan bisa dibatasi saat trafik tinggi; pindah ke CDN bila sering gagal
+    const driveImg = (fileId, width) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
+
+    // Login email/password
+    $("loginView").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("loginMsg").textContent = "";
+      try {
+        await signInWithEmailAndPassword(auth, $("email").value, $("password").value);
+      } catch (err) {
+        $("loginMsg").textContent = "Login gagal: " + err.message;
+      }
+    });
+
+    // Cek status login: hanya ADMIN_UID yang boleh melihat live screen
+    onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+      if (user && user.uid !== ADMIN_UID) {
+        $("loginMsg").textContent = "Akses ditolak";
+        signOut(auth);
+        return;
+      }
+      $("loginView").hidden = !!user;
+      $("liveView").hidden = !user;
+      if (user) startLive();
+    });
+
+    // Listener realtime: 30 foto terbaru, urut paling baru
+    function startLive() {
+      const q = query(
+        collection(db, "events", EVENT_ID, "photos"),
+        orderBy("createdAt", "desc"),
+        limit(30),
+      );
+      unsubscribe = onSnapshot(q, (snap) => render(snap.docs.map((d) => d.data())),
+        (err) => { $("empty").hidden = false; $("empty").textContent = "Gagal memuat: " + err.message; });
+    }
+
+    // Tampilkan foto terbaru di layar utama dan 12 thumbnail di strip bawah (Foto Tersembunyi dilewati)
+    function render(photos) {
+      const visible = photos.filter((p) => !p.hidden);
+      $("counter").textContent = `${visible.length} foto terbaru`;
+
+      $("empty").hidden = visible.length > 0;
+      $("main").hidden = visible.length === 0;
+      if (visible[0]) {
+        const src = driveImg(visible[0].fileId, 1600);
+        if ($("main").src !== src) $("main").src = src;
+      }
+
+      $("strip").replaceChildren(...visible.slice(0, 12).map((p) => {
+        const img = document.createElement("img");
+        img.src = driveImg(p.fileId, 400);
+        img.alt = "";
+        return img;
+      }));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Dependensi npm tidak dipakai: Firebase dimuat dari CDN gstatic
+node_modules/
+
+# Berisi ID folder Momen yang dibagikan lewat link; repo GitHub Pages publik, jadi jangan diunggah
+apps-script/Code.gs

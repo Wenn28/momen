@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    match /events/{eventId}/photos/{photoId} {
+      allow read: if request.auth != null && request.auth.uid == '2aSB3bThloO9mAAjG6VTjwrP9XD2';
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'fileId', 'createdAt'])
+        && request.resource.data.fileId is string
+        && request.resource.data.createdAt == request.time;
+      // Admin hanya boleh mengubah status sembunyi
+      allow update: if request.auth != null && request.auth.uid == '2aSB3bThloO9mAAjG6VTjwrP9XD2'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden'])
+        && request.resource.data.hidden is bool;
+    }
+    match /events/{eventId}/users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count is int
+        && request.resource.data.count >= 0
+        && request.resource.data.count <= 10;
+    }
+  }
+}
