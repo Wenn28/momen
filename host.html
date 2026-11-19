@@ -28,7 +28,6 @@
     .room .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
     .new { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 240px; border: 2px dashed var(--line-strong); border-radius: 20px; color: var(--ink); font-weight: 600; text-decoration: none; }
     .new:hover { background: var(--sand); color: var(--ink); }
-    .notice { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 16px; background: var(--sand); }
   </style>
 </head>
 <body>
@@ -122,12 +121,6 @@
         </a>
       </div>
 
-      <!-- Email belum diizinkan pemilik untuk membuat room -->
-      <div class="notice" id="notAllowed" hidden role="status">
-        <strong>Emailmu belum diizinkan membuat room</strong>
-        <span class="muted">Minta pemilik Momen menambahkan <span id="askEmail"></span> ke daftar Host. Setelah ditambahkan, muat ulang halaman ini.</span>
-      </div>
-
       <div class="filters">
         <input class="input" type="search" id="search" aria-label="Cari room" placeholder="Cari nama room atau kode">
         <div style="display: flex; gap: 8px" role="group" aria-label="Saring status">
@@ -147,7 +140,7 @@
       onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signInWithEmailAndPassword,
       createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signOut,
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { auth, db, $, showMsg, formatDate, isActive, swatch } from "./app.js";
 
     // Pesan error Firebase Auth dalam bahasa yang dimengerti Host
@@ -285,16 +278,6 @@
       }
     }
 
-    // Cek apakah email ada di daftar Host; tombol Buat room dikunci bila belum
-    async function checkAllowed(user) {
-      const email = (user.email || "").toLowerCase();
-      let allowed = false;
-      try { allowed = (await getDoc(doc(db, "hosts", email))).exists(); } catch { allowed = false; }
-      $("notAllowed").hidden = allowed;
-      $("askEmail").textContent = email;
-      $("btnNew").hidden = !allowed;
-    }
-
     // Pilih tampilan sesuai status login
     function show(user) {
       const signedIn = user && !user.isAnonymous;
@@ -305,7 +288,6 @@
       if (needVerify) $("verifyEmail").textContent = user.email;
       if (signedIn && !needVerify) {
         $("who").textContent = user.email;
-        checkAllowed(user);
         loadRooms(user);
       }
     }

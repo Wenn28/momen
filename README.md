@@ -22,8 +22,8 @@ Aplikasi foto acara. Host membuat **room**, tamu bergabung dengan kode room atau
 
 ## Peran
 
-- **Pemilik** (Anda): pemilik project Firebase, Drive, dan Apps Script. Menentukan siapa yang boleh menjadi Host.
-- **Host:** orang yang emailnya Anda izinkan. Membuat dan mengelola room miliknya sendiri.
+- **Pemilik** (Anda): pemilik project Firebase, Drive, dan Apps Script.
+- **Host:** siapa saja yang masuk dengan Google atau email terverifikasi. Membuat dan mengelola room miliknya sendiri.
 - **Tamu:** siapa saja yang tahu kode room. Tanpa akun.
 
 ## 1. Setup Firebase
@@ -31,12 +31,7 @@ Aplikasi foto acara. Host membuat **room**, tamu bergabung dengan kode room atau
 1. **Authentication > Sign-in method:** aktifkan **Anonymous**, **Email/Password**, dan **Google**. Untuk Google, isi "Project support email", lalu **Save**.
 2. **Authentication > Settings > Authorized domains:** pastikan domain situs ada, misalnya `wenn28.github.io`.
 3. **Firestore > Rules:** ganti isinya dengan `firestore.rules`, lalu **Publish**.
-4. **Izinkan Host:** di **Firestore > Data**, klik **Start collection**:
-   - Collection ID: `hosts`
-   - Document ID: email Host dalam **huruf kecil**, misalnya `nama@gmail.com`
-   - Field: `nama` (string) berisi nama Host, cukup sebagai catatan
-   - Ulangi **Add document** untuk setiap Host.
-5. **Indeks galeri Tamu:** buka `galeri.html` sebuah room satu kali. Kalau muncul error "The query requires an index", klik link di pesan itu, lalu **Create index**. Bisa juga dibuat manual di **Firestore > Indexes > Composite**: collection `photos`, field `hidden` Ascending lalu `createdAt` Descending, query scope Collection. Tunggu statusnya **Enabled** (beberapa menit).
+4. **Indeks galeri Tamu:** buka `galeri.html` sebuah room satu kali. Kalau muncul error "The query requires an index", klik link di pesan itu, lalu **Create index**. Bisa juga dibuat manual di **Firestore > Indexes > Composite**: collection `photos`, field `hidden` Ascending lalu `createdAt` Descending, query scope Collection. Tunggu statusnya **Enabled** (beberapa menit).
 
 Host yang mendaftar dengan email dan kata sandi harus memverifikasi email lebih dulu. Login Google tidak perlu, karena emailnya sudah terverifikasi.
 

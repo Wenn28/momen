@@ -6,17 +6,12 @@ service cloud.firestore {
     function roomData(roomId) { return get(/databases/$(db)/documents/rooms/$(roomId)).data; }
     function isOwner(roomId) { return signedIn() && roomData(roomId).ownerUid == request.auth.uid; }
 
-    // Host = akun dengan email terverifikasi yang tercatat di koleksi hosts (diisi pemilik lewat Console)
+    // Host = siapa pun yang masuk dengan akun email terverifikasi (Google atau email/sandi), bukan Tamu anonim
     function isHost() {
       return signedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
         && request.auth.token.email != null
-        && request.auth.token.email_verified == true
-        && exists(/databases/$(db)/documents/hosts/$(request.auth.token.email.lower()));
-    }
-
-    // Daftar email Host: hanya bisa dibaca pemilik email itu sendiri, ditulis manual lewat Console
-    match /hosts/{email} {
-      allow get: if signedIn() && request.auth.token.email != null && request.auth.token.email.lower() == email;
+        && request.auth.token.email_verified == true;
     }
 
     // Room: siapa pun yang tahu kodenya boleh membaca (nama acara, kuota, pengaturan)

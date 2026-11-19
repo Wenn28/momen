@@ -119,13 +119,10 @@
     preview();
 
     requireHost(async (user) => {
-      // Email belum diizinkan: form dikunci dengan penjelasan
-      const allowed = await getDoc(doc(db, "hosts", (user.email || "").toLowerCase())).then((s) => s.exists()).catch(() => false);
-      if (!allowed || !user.emailVerified) {
+      // Email belum diverifikasi: form dikunci dengan penjelasan (rules menolak room dari email belum terverifikasi)
+      if (!user.emailVerified) {
         $("btnCreate").disabled = true;
-        showMsg($("msg"), user.emailVerified
-          ? "Emailmu belum diizinkan membuat room. Minta pemilik Momen menambahkannya ke daftar Host."
-          : "Verifikasi emailmu dulu di halaman Room saya.", "error");
+        showMsg($("msg"), "Verifikasi emailmu dulu di halaman Room saya.", "error");
         return;
       }
 

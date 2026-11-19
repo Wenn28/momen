@@ -9,7 +9,7 @@ export const firebaseConfig = {
   appId: "1:347072594212:web:c8e86bdd3b26ff2a9073b1"
 };
 
-// Host tidak lagi diatur di sini: email Host yang diizinkan dicatat di Firestore, koleksi "hosts" (lihat README).
+// Siapa pun yang masuk dengan email terverifikasi bisa menjadi Host (lihat docs/adr/0003-host-terbuka.md).
 // Room dan kodenya dibuat Host dari halaman host.html.
 
 // URL Web App Apps Script (berakhiran /exec). Isi setelah deploy apps-script/Code.gs.

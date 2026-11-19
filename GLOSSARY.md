@@ -7,11 +7,11 @@ Aplikasi untuk mengumpulkan foto dari tamu selama sebuah acara, lalu menampilkan
 ### Orang
 
 **Pemilik**:
-Satu orang yang memiliki project Firebase, Drive, dan Apps Script Momen, dan yang menentukan siapa boleh menjadi Host.
+Satu orang yang memiliki project Firebase, Drive, dan Apps Script Momen, tempat semua foto tersimpan.
 _Avoid_: Admin, owner, superadmin
 
 **Host**:
-Orang dengan email yang diizinkan Pemilik untuk membuat dan mengelola Room miliknya sendiri.
+Orang yang masuk dengan email terverifikasi untuk membuat dan mengelola Room miliknya sendiri.
 _Avoid_: Admin, tuan rumah (di teks teknis), panitia
 
 **Tamu**:
