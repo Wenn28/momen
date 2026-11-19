@@ -140,6 +140,8 @@
             if (!(await getDoc(doc(db, "rooms", c))).exists()) code = c;
           }
           if (!code) throw new Error("Tidak menemukan kode kosong, coba lagi.");
+          // Token lama bisa masih membawa email_verified=false walau email sudah diverifikasi; rules membaca token
+          await user.getIdToken(true);
           await setDoc(doc(db, "rooms", code), {
             ownerUid: user.uid,
             name,
