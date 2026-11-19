@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Host</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .auth { display: flex; flex-direction: column; gap: 22px; width: 100%; max-width: 420px; }
+    .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+    .or::before, .or::after { content: ""; flex: 1; height: 1.5px; background: var(--line); }
+    .linkbtn { background: none; border: 0; padding: 0; min-height: 44px; font: 600 14px var(--body); color: var(--accent); }
+    .linkbtn:hover { color: var(--accent-hover); text-decoration: underline; }
+    .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .filters .input { flex: 1 1 260px; max-width: 420px; min-height: 48px; }
+    .pill { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: 600 14px var(--body); }
+    .pill:hover { border-color: var(--line-strong); }
+    .pill[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+    .room { display: flex; flex-direction: column; background: var(--surface); border: 1.5px solid var(--line); border-radius: 20px; overflow: hidden; color: var(--ink); text-decoration: none; }
+    .room:hover { border-color: var(--line-strong); color: var(--ink); }
+    .room .band { height: 120px; display: flex; align-items: flex-end; padding: 12px 16px; font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: 3px; color: var(--ink); }
+    .room .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; }
+    .room .title { font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.15; }
+    .room .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; }
+    .new { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 240px; border: 2px dashed var(--line-strong); border-radius: 20px; color: var(--ink); font-weight: 600; text-decoration: none; }
+    .new:hover { background: var(--sand); color: var(--ink); }
+    .notice { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 16px; background: var(--sand); }
+  </style>
+</head>
+<body>
+  <!-- ===== Belum masuk: form login / daftar / lupa kata sandi ===== -->
+  <div class="split" id="authView" hidden>
+    <main>
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <div class="auth">
+        <div>
+          <h1 class="display" id="authTitle" style="font-size: clamp(34px, 3.6vw, 44px)">Masuk sebagai Host</h1>
+          <p class="muted" id="authLead" style="margin: 8px 0 0">Kelola room, foto tamu, dan kartu QR acaramu.</p>
+        </div>
+
+        <button class="btn btn-secondary btn-lg" id="btnGoogle" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>
+          Masuk dengan Google
+        </button>
+
+        <div class="or">atau dengan email</div>
+
+        <form id="emailForm" style="display: flex; flex-direction: column; gap: 18px" novalidate>
+          <div class="field">
+            <label for="email">Email</label>
+            <input class="input" id="email" type="email" autocomplete="email" placeholder="nama@email.com" required>
+          </div>
+          <div class="field" id="passField">
+            <label for="pass">Kata sandi</label>
+            <input class="input" id="pass" type="password" autocomplete="current-password" minlength="8" placeholder="Minimal 8 karakter" required>
+          </div>
+          <button class="btn btn-primary btn-lg" id="btnSubmit" type="submit">Masuk</button>
+          <p class="msg" id="authMsg" role="status" aria-live="polite"></p>
+        </form>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px">
+          <button class="linkbtn" id="toggleMode" type="button">Belum punya akun? Daftar</button>
+          <button class="linkbtn" id="toggleReset" type="button">Lupa kata sandi?</button>
+        </div>
+      </div>
+    </main>
+    <aside class="panel">
+      <h2 class="display" style="font-size: clamp(34px, 4vw, 52px)">Semua foto tamu <em>kumpul</em> di satu room.</h2>
+      <p style="margin: 0; font-size: 17px; max-width: 32ch">Tamu cukup scan kartu QR dan memotret. Kamu yang memilih foto mana yang tampil di layar acara.</p>
+    </aside>
+  </div>
+
+  <!-- ===== Email belum diverifikasi ===== -->
+  <div class="split" id="verifyView" hidden>
+    <main>
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <div class="auth">
+        <h1 class="display" style="font-size: 40px">Cek emailmu</h1>
+        <p style="margin: 0">Kami mengirim link verifikasi ke <strong id="verifyEmail"></strong>. Buka link itu, lalu kembali ke sini.</p>
+        <button class="btn btn-primary btn-lg" id="btnVerified" type="button">Saya sudah verifikasi</button>
+        <button class="btn btn-secondary" id="btnResend" type="button">Kirim ulang email</button>
+        <button class="linkbtn" id="btnLogout2" type="button" style="align-self: flex-start">Keluar dan pakai akun lain</button>
+        <p class="msg" id="verifyMsg" role="status" aria-live="polite"></p>
+      </div>
+    </main>
+    <aside class="panel">
+      <h2 class="display" style="font-size: clamp(34px, 4vw, 52px)">Satu langkah <em>lagi</em>.</h2>
+      <p style="margin: 0; font-size: 17px; max-width: 32ch">Verifikasi memastikan hanya pemilik email yang bisa membuat room atas namanya.</p>
+    </aside>
+  </div>
+
+  <!-- ===== Sudah masuk: daftar room ===== -->
+  <div class="shell" id="listView" hidden>
+    <aside class="side">
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <nav aria-label="Menu Host">
+        <a class="nav" href="host.html" aria-current="page">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>
+          Room saya
+        </a>
+        <a class="nav" href="buat.html">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Buat room
+        </a>
+      </nav>
+      <div class="who"><span id="who"></span><button class="btn btn-secondary" id="btnLogout" type="button">Keluar</button></div>
+    </aside>
+
+    <main class="content">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Dashboard Host</p>
+          <h1 class="display">Room saya</h1>
+        </div>
+        <a class="btn btn-primary" href="buat.html" id="btnNew">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Buat room
+        </a>
+      </div>
+
+      <!-- Email belum diizinkan pemilik untuk membuat room -->
+      <div class="notice" id="notAllowed" hidden role="status">
+        <strong>Emailmu belum diizinkan membuat room</strong>
+        <span class="muted">Minta pemilik Momen menambahkan <span id="askEmail"></span> ke daftar Host. Setelah ditambahkan, muat ulang halaman ini.</span>
+      </div>
+
+      <div class="filters">
+        <input class="input" type="search" id="search" aria-label="Cari room" placeholder="Cari nama room atau kode">
+        <div style="display: flex; gap: 8px" role="group" aria-label="Saring status">
+          <button class="pill" type="button" data-filter="all" aria-pressed="true">Semua</button>
+          <button class="pill" type="button" data-filter="active" aria-pressed="false">Aktif</button>
+          <button class="pill" type="button" data-filter="done" aria-pressed="false">Selesai</button>
+        </div>
+      </div>
+
+      <div class="empty" id="state"><div class="spinner" aria-hidden="true"></div><p style="margin: 0">Memuat room…</p></div>
+      <div class="rooms" id="rooms" hidden></div>
+    </main>
+  </div>
+
+  <script type="module">
+    import {
+      onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signInWithEmailAndPassword,
+      createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signOut,
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { auth, db, $, showMsg, formatDate, isActive, swatch } from "./app.js";
+
+    // Pesan error Firebase Auth dalam bahasa yang dimengerti Host
+    const AUTH_ERR = {
+      "auth/invalid-credential": "Email atau kata sandi salah.",
+      "auth/wrong-password": "Email atau kata sandi salah.",
+      "auth/user-not-found": "Email ini belum terdaftar. Pilih Daftar.",
+      "auth/email-already-in-use": "Email ini sudah terdaftar. Pilih Masuk.",
+      "auth/weak-password": "Kata sandi minimal 8 karakter.",
+      "auth/invalid-email": "Format email tidak valid.",
+      "auth/too-many-requests": "Terlalu banyak percobaan. Tunggu beberapa menit.",
+      "auth/popup-closed-by-user": "Jendela Google ditutup sebelum selesai.",
+      "auth/unauthorized-domain": "Domain situs ini belum diizinkan di Firebase (Authorized domains).",
+    };
+    const authError = (e) => AUTH_ERR[e.code] || e.message;
+
+    // ===== Mode form: masuk / daftar / lupa kata sandi =====
+    let mode = "login";
+    function setMode(next) {
+      mode = next;
+      const t = { login: ["Masuk sebagai Host", "Masuk"], signup: ["Daftar sebagai Host", "Daftar"], reset: ["Atur ulang kata sandi", "Kirim link atur ulang"] }[mode];
+      $("authTitle").textContent = t[0];
+      $("btnSubmit").textContent = t[1];
+      $("passField").hidden = mode === "reset";
+      $("pass").autocomplete = mode === "signup" ? "new-password" : "current-password";
+      $("toggleMode").textContent = mode === "signup" ? "Sudah punya akun? Masuk" : "Belum punya akun? Daftar";
+      $("toggleReset").textContent = mode === "reset" ? "Kembali ke Masuk" : "Lupa kata sandi?";
+      showMsg($("authMsg"), "");
+    }
+    $("toggleMode").onclick = () => setMode(mode === "signup" ? "login" : "signup");
+    $("toggleReset").onclick = () => setMode(mode === "reset" ? "login" : "reset");
+
+    // Masuk dengan Google; popup diblokir (umum di HP) → pindah ke mode redirect
+    $("btnGoogle").onclick = async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        if (e.code === "auth/popup-blocked") return signInWithRedirect(auth, provider);
+        showMsg($("authMsg"), authError(e), "error");
+      }
+    };
+
+    // Form email: validasi singkat, lalu masuk / daftar / kirim link atur ulang
+    $("emailForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = $("email").value.trim();
+      const pass = $("pass").value;
+      if (!email) { showMsg($("authMsg"), "Isi email dulu.", "error"); $("email").focus(); return; }
+      if (mode !== "reset" && pass.length < 8) { showMsg($("authMsg"), "Kata sandi minimal 8 karakter.", "error"); $("pass").focus(); return; }
+      $("btnSubmit").disabled = true;
+      try {
+        if (mode === "login") await signInWithEmailAndPassword(auth, email, pass);
+        if (mode === "signup") {
+          const cred = await createUserWithEmailAndPassword(auth, email, pass);
+          await sendEmailVerification(cred.user);
+        }
+        if (mode === "reset") {
+          await sendPasswordResetEmail(auth, email);
+          showMsg($("authMsg"), `Link atur ulang dikirim ke ${email}. Cek juga folder spam.`, "ok");
+        }
+      } catch (err) {
+        showMsg($("authMsg"), authError(err), "error");
+      } finally {
+        $("btnSubmit").disabled = false;
+      }
+    });
+
+    // ===== Verifikasi email =====
+    $("btnVerified").onclick = async () => {
+      await auth.currentUser.reload();
+      if (auth.currentUser.emailVerified) {
+        await auth.currentUser.getIdToken(true); // token baru membawa email_verified untuk rules
+        show(auth.currentUser);
+      } else showMsg($("verifyMsg"), "Email belum terverifikasi. Buka link di emailmu dulu.", "error");
+    };
+    $("btnResend").onclick = () => sendEmailVerification(auth.currentUser)
+      .then(() => showMsg($("verifyMsg"), "Email verifikasi dikirim ulang.", "ok"))
+      .catch((e) => showMsg($("verifyMsg"), authError(e), "error"));
+    $("btnLogout").onclick = $("btnLogout2").onclick = () => signOut(auth);
+
+    // ===== Daftar room =====
+    let rooms = [];
+    let filter = "all";
+
+    function renderRooms() {
+      const term = $("search").value.trim().toLowerCase();
+      const list = rooms.filter((r) =>
+        (filter === "all" || (filter === "active") === isActive(r)) &&
+        (!term || r.name.toLowerCase().includes(term) || r.id.toLowerCase().includes(term)));
+
+      const cards = list.map((r) => {
+        const a = document.createElement("a");
+        a.className = "room";
+        a.href = `kelola.html?r=${r.id}`;
+        const active = isActive(r);
+        a.innerHTML = `<div class="band"></div><div class="body"><div class="title"></div><div class="muted date"></div><div class="meta"><span>Kuota ${r.quota} foto/tamu</span><span class="chip ${active ? "chip-ok" : ""}">${active ? "Aktif" : "Selesai"}</span></div></div>`;
+        a.querySelector(".band").style.background = swatch(r.id);
+        a.querySelector(".band").textContent = r.id;
+        a.querySelector(".title").textContent = r.name;
+        a.querySelector(".date").textContent = formatDate(r.date) || "Tanpa tanggal";
+        return a;
+      });
+      const add = Object.assign(document.createElement("a"), { className: "new", href: "buat.html" });
+      add.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Buat room baru`;
+
+      if (!rooms.length) {
+        $("rooms").hidden = true;
+        $("state").hidden = false;
+        $("state").innerHTML = `<p style="margin:0"><strong>Belum ada room.</strong><br>Buat room pertamamu, lalu bagikan kodenya ke tamu.</p><a class="btn btn-primary" href="buat.html">Buat room</a>`;
+        return;
+      }
+      $("state").hidden = !!list.length;
+      if (!list.length) $("state").innerHTML = `<p style="margin:0">Tidak ada room yang cocok.</p>`;
+      $("rooms").hidden = !list.length;
+      $("rooms").replaceChildren(...cards, add);
+    }
+
+    $("search").oninput = renderRooms;
+    document.querySelectorAll("[data-filter]").forEach((b) => b.onclick = () => {
+      filter = b.dataset.filter;
+      document.querySelectorAll("[data-filter]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      renderRooms();
+    });
+
+    // Muat room milik Host (diurutkan di browser: tanpa indeks gabungan Firestore)
+    async function loadRooms(user) {
+      try {
+        const snap = await getDocs(query(collection(db, "rooms"), where("ownerUid", "==", user.uid)));
+        rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        renderRooms();
+      } catch (e) {
+        $("state").textContent = "Gagal memuat room: " + e.message;
+      }
+    }
+
+    // Cek apakah email ada di daftar Host; tombol Buat room dikunci bila belum
+    async function checkAllowed(user) {
+      const email = (user.email || "").toLowerCase();
+      let allowed = false;
+      try { allowed = (await getDoc(doc(db, "hosts", email))).exists(); } catch { allowed = false; }
+      $("notAllowed").hidden = allowed;
+      $("askEmail").textContent = email;
+      $("btnNew").hidden = !allowed;
+    }
+
+    // Pilih tampilan sesuai status login
+    function show(user) {
+      const signedIn = user && !user.isAnonymous;
+      const needVerify = signedIn && !user.emailVerified;
+      $("authView").hidden = signedIn;
+      $("verifyView").hidden = !needVerify;
+      $("listView").hidden = !signedIn || needVerify;
+      if (needVerify) $("verifyEmail").textContent = user.email;
+      if (signedIn && !needVerify) {
+        $("who").textContent = user.email;
+        checkAllowed(user);
+        loadRooms(user);
+      }
+    }
+    onAuthStateChanged(auth, show);
+  </script>
+</body>
+</html>

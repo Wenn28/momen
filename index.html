@@ -3,323 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Momen: Ambil Foto</title>
+  <title>Momen: Gabung Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
   <style>
-    /* Dasar: tema gelap, mobile-first, satu kolom */
-    * { box-sizing: border-box; }
-    body { margin: 0; background: #111; color: #eee; font-family: system-ui, sans-serif; }
-    main { max-width: 420px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 16px; }
-    h1 { margin: 0; font-size: 1.4rem; }
-    .quota { margin: 0; color: #aaa; }
-
-    /* Tombol besar agar mudah ditekan di HP */
-    button { width: 100%; padding: 16px; font-size: 1rem; font-weight: 600; border: 0; border-radius: 12px; background: #f5c542; color: #111; cursor: pointer; }
-    button.secondary { background: #333; color: #eee; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .row { display: flex; gap: 12px; margin-top: 12px; }
-
-    /* Jendela kamera langsung (viewfinder) dan preview hasil jepretan, rasio 3:4 seperti kamera HP */
-    #viewfinder, #preview { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; background: #000; }
-    /* Kamera depan ditampilkan seperti cermin agar selfie terasa wajar; hasil foto tetap tidak terbalik */
-    #viewfinder.mirror { transform: scaleX(-1); }
-
-    /* Pesan status */
-    .msg { min-height: 1.5em; margin: 0; text-align: center; }
-    .msg.error { color: #ff6b6b; }
-    .msg.ok { color: #6bdc8b; }
-    [hidden] { display: none !important; }
+    /* Input kode room: huruf besar berjarak agar 6 karakter mudah dibaca dan dicek ulang */
+    #code { font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: 6px; text-transform: uppercase; text-align: center; min-height: 72px; }
+    .join { display: flex; flex-direction: column; gap: 16px; max-width: 440px; }
+    .panel .lead { margin: 0; font-size: 17px; max-width: 30ch; }
+    .panel .btn-secondary { align-self: flex-start; border-color: #fff; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Bagikan Momen Anda</h1>
-    <p class="quota" id="quota">Memuat…</p>
-
-    <!-- Layar kamera: foto hanya bisa diambil dari kamera langsung, tidak dari galeri -->
-    <section id="cameraView">
-      <video id="viewfinder" autoplay playsinline muted width="900" height="1200" hidden aria-label="Tampilan kamera"></video>
-      <button id="btnCamera" disabled>Buka Kamera</button>
-      <div class="row" id="shootRow" hidden>
-        <button id="btnFlip" class="secondary">Ganti Kamera</button>
-        <button id="btnShoot">Ambil Foto</button>
+  <div class="split">
+    <!-- Kolom utama: Tamu memasukkan kode room -->
+    <main>
+      <header><a class="brand" href="index.html">momen<span>.</span></a></header>
+      <div>
+        <h1 class="display" style="font-size: clamp(38px, 5vw, 60px)">Masuk ke room, lalu <em>abadikan</em> acaranya.</h1>
+        <p class="muted" style="margin: 12px 0 0; font-size: 17px; max-width: 34ch">Tanpa daftar, tanpa unduh aplikasi. Kode room ada di kartu QR atau dari tuan rumah.</p>
       </div>
-    </section>
+      <form class="join" id="joinForm" novalidate>
+        <div class="field">
+          <label for="code">Kode room</label>
+          <input class="input" id="code" name="code" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="6" placeholder="K7P2QX" required>
+        </div>
+        <button class="btn btn-primary btn-lg" id="btnJoin" type="submit">Masuk room</button>
+        <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      </form>
+    </main>
 
-    <!-- Layar preview: tampil setelah foto diambil dan dikompres -->
-    <section id="previewView" hidden>
-      <img id="preview" alt="Foto yang baru kamu ambil" width="900" height="1200">
-      <div class="row">
-        <button id="btnRetake" class="secondary">Foto Ulang</button>
-        <button id="btnUpload">Lanjut (Upload)</button>
-      </div>
-    </section>
-
-    <p class="msg" id="msg" role="status" aria-live="polite"></p>
-  </main>
+    <!-- Kolom samping: jalan masuk untuk Host -->
+    <aside class="panel">
+      <h2 class="display" style="font-size: clamp(32px, 4vw, 48px)">Punya acara? Buat room <em>sendiri</em>.</h2>
+      <p class="lead">Host membuat room, mencetak kartu QR, lalu memilih foto mana yang tampil di layar acara.</p>
+      <a class="btn btn-secondary" href="host.html">Masuk sebagai Host</a>
+    </aside>
+  </div>
 
   <script type="module">
-    // Import Firebase SDK modular dari CDN gstatic
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { firebaseConfig, EVENT_ID, APPS_SCRIPT_URL } from "./firebase-config.js";
+    import { $, showMsg, cleanCode, loadRoom } from "./app.js";
 
-    // Batas foto per tamu; harus sama dengan angka di firestore.rules
-    const MAX = 10;
-    // Batas ukuran file; harus sama dengan apps-script/Code.gs (< 2 MB)
-    const MAX_BYTES = 2 * 1024 * 1024;
+    // Rapikan ketikan: huruf besar, hanya huruf/angka, maks 6
+    $("code").addEventListener("input", (e) => { e.target.value = cleanCode(e.target.value); });
 
-    // Inisialisasi layanan Firebase (Auth + Firestore; foto disimpan di Google Drive)
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Referensi elemen UI
-    const $ = (id) => document.getElementById(id);
-    const ui = {
-      quota: $("quota"), msg: $("msg"), viewfinder: $("viewfinder"), shootRow: $("shootRow"),
-      cameraView: $("cameraView"), previewView: $("previewView"), preview: $("preview"),
-      btnCamera: $("btnCamera"), btnFlip: $("btnFlip"), btnShoot: $("btnShoot"),
-      btnRetake: $("btnRetake"), btnUpload: $("btnUpload"),
-    };
-
-    // State halaman
-    let uid = null;            // UID tamu anonim
-    let used = 0;              // jumlah foto yang sudah dipakai
-    let blob = null;           // hasil kompres yang siap diupload
-    let previewUrl = null;     // object URL untuk preview (dilepas saat ganti foto)
-    let stream = null;         // aliran video kamera yang sedang aktif
-    let facing = "environment"; // kamera belakang dulu; "user" = kamera depan
-
-    // Dokumen kuota milik tamu ini: events/{EVENT_ID}/users/{uid}
-    const userRef = () => doc(db, "events", EVENT_ID, "users", uid);
-
-    // Tampilkan pesan status (type: "", "ok", atau "error")
-    function showMsg(text, type = "") {
-      ui.msg.textContent = text;
-      ui.msg.className = "msg " + type;
-    }
-
-    // Perbarui teks sisa kuota dan kunci tombol kamera bila habis
-    function renderQuota() {
-      ui.quota.textContent = `Sisa ${MAX - used} dari ${MAX} foto`;
-      ui.btnCamera.disabled = ui.btnShoot.disabled = used >= MAX;
-      if (used >= MAX) stopCamera();
-    }
-
-    // Kembali ke layar kamera dan buang foto yang sedang dipreview
-    function showCamera() {
-      blob = null;
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      previewUrl = null;
-      ui.previewView.hidden = true;
-      ui.cameraView.hidden = false;
-    }
-
-    // Pindah ke layar preview dengan blob hasil kompres
-    function showPreview(newBlob) {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      blob = newBlob;
-      previewUrl = URL.createObjectURL(blob);
-      ui.preview.src = previewUrl;
-      ui.cameraView.hidden = true;
-      ui.previewView.hidden = false;
-    }
-
-    // Pesan yang bisa dipahami Tamu untuk tiap jenis kegagalan kamera
-    function cameraError(e) {
-      if (!window.isSecureContext || !navigator.mediaDevices) return "Kamera hanya bisa dibuka lewat alamat https://.";
-      if (e.name === "NotAllowedError") return "Izin kamera ditolak. Izinkan akses kamera untuk situs ini di pengaturan browser, lalu muat ulang halaman.";
-      if (e.name === "NotFoundError" || e.name === "OverconstrainedError") return "Kamera tidak ditemukan di perangkat ini.";
-      if (e.name === "NotReadableError") return "Kamera sedang dipakai aplikasi lain. Tutup aplikasi itu, lalu coba lagi.";
-      return "Gagal membuka kamera: " + e.message;
-    }
-
-    // Matikan kamera (lampu indikator kamera ikut padam)
-    function stopCamera() {
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-      stream = null;
-      ui.viewfinder.srcObject = null;
-      ui.viewfinder.hidden = ui.shootRow.hidden = true;
-      ui.btnCamera.hidden = false;
-    }
-
-    // Nyalakan kamera langsung di halaman; galeri tidak bisa dipakai
-    async function openCamera() {
-      if (used >= MAX) return;
-      ui.btnCamera.disabled = true;
-      showMsg("Membuka kamera…");
+    // Cek kode ke Firestore sebelum pindah ke halaman Tamu
+    $("joinForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = cleanCode($("code").value);
+      if (code.length !== 6) { showMsg($("msg"), "Kode room terdiri dari 6 huruf atau angka.", "error"); $("code").focus(); return; }
+      $("btnJoin").disabled = true;
+      showMsg($("msg"), "Mencari room…");
       try {
-        if (!navigator.mediaDevices) throw new Error("no mediaDevices");
-        if (stream) stream.getTracks().forEach((t) => t.stop());
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1920 } },
-          audio: false,
-        });
-        ui.viewfinder.srcObject = stream;
-        ui.viewfinder.classList.toggle("mirror", facing === "user");
-        ui.viewfinder.hidden = ui.shootRow.hidden = false;
-        ui.btnCamera.hidden = true;
-        showMsg("");
-        ui.btnShoot.focus();
-      } catch (e) {
-        stopCamera();
-        showMsg(cameraError(e), "error");
+        const room = await loadRoom(code);
+        if (!room) { showMsg($("msg"), `Room ${code} tidak ditemukan. Cek lagi kodenya.`, "error"); return; }
+        location.href = `tamu.html?r=${code}`;
+      } catch (err) {
+        showMsg($("msg"), "Gagal mencari room: " + err.message, "error");
       } finally {
-        ui.btnCamera.disabled = used >= MAX;
-      }
-    }
-
-    // Tukar kamera belakang ↔ depan
-    function flipCamera() {
-      facing = facing === "environment" ? "user" : "environment";
-      openCamera();
-    }
-
-    // Jepret: ambil satu frame dari video, kompres, lalu tampilkan preview
-    async function shoot() {
-      const v = ui.viewfinder;
-      if (!stream || !v.videoWidth) { showMsg("Kamera belum siap, tunggu sebentar.", "error"); return; }
-      try {
-        const photo = await compress(v, v.videoWidth, v.videoHeight);
-        stopCamera();
-        showPreview(photo);
-        showMsg("");
-      } catch (e) {
-        showMsg(e.message, "error");
-      }
-    }
-
-    // Kompres frame kamera: sisi terpanjang maks 1280px, JPEG kualitas 0.7
-    async function compress(source, width, height) {
-      const scale = Math.min(1, 1280 / Math.max(width, height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(width * scale);
-      canvas.height = Math.round(height * scale);
-      canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
-
-      // Turunkan kualitas bila hasil masih melewati batas Apps Script
-      for (const quality of [0.7, 0.55, 0.4]) {
-        const out = await new Promise((r) => canvas.toBlob(r, "image/jpeg", quality));
-        if (out && out.size < MAX_BYTES) return out;
-      }
-      throw new Error("Foto terlalu besar setelah dikompres");
-    }
-
-    // Ubah blob JPEG menjadi teks base64 (tanpa awalan data:) untuk dikirim ke Apps Script
-    function blobToBase64(b) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = () => reject(new Error("Gagal membaca foto"));
-        reader.readAsDataURL(b);
-      });
-    }
-
-    // Kirim foto ke Apps Script → disimpan di Google Drive; mengembalikan fileId Drive
-    async function sendToDrive(b) {
-      // Content-Type text/plain agar browser tidak mengirim preflight CORS
-      const res = await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          idToken: await auth.currentUser.getIdToken(),
-          eventId: EVENT_ID,
-          image: await blobToBase64(b),
-        }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
-      return data.fileId;
-    }
-
-    // Ubah count kuota secara atomik; mengembalikan count baru
-    function changeCount(delta) {
-      return runTransaction(db, async (tx) => {
-        const snap = await tx.get(userRef());
-        const count = snap.exists() ? snap.data().count : 0;
-        if (delta > 0 && count >= MAX) throw new Error("KUOTA_HABIS");
-        const next = Math.max(0, count + delta);
-        tx.set(userRef(), { count: next });
-        return next;
-      });
-    }
-
-    // Alur upload: kuota (+1) → Google Drive → dokumen photos; rollback kuota bila gagal
-    async function upload() {
-      if (!blob || !uid) return;
-      ui.btnUpload.disabled = ui.btnRetake.disabled = true;
-      showMsg("Mengunggah…");
-
-      try {
-        // a. Cek dan naikkan kuota di dalam transaksi
-        try {
-          used = await changeCount(+1);
-        } catch (e) {
-          if (e.message === "KUOTA_HABIS") {
-            used = MAX;
-            renderQuota();
-            showCamera();
-            showMsg("Kuota 10 foto sudah habis", "error");
-          } else {
-            showMsg("Gagal memeriksa kuota: " + e.message, "error");
-          }
-          return;
-        }
-
-        try {
-          // b. Upload file ke Google Drive lewat Apps Script (folder Momen/{EVENT_ID}/{uid}/)
-          const fileId = await sendToDrive(blob);
-
-          // c. Catat foto di Firestore agar muncul di Live Screen dan Admin
-          const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-          await setDoc(doc(db, "events", EVENT_ID, "photos", photoId), {
-            uid, fileId, createdAt: serverTimestamp(),
-          });
-        } catch (e) {
-          // d. Upload gagal: kembalikan kuota (count -1)
-          try { used = await changeCount(-1); } catch { /* kuota tetap terpakai bila rollback juga gagal */ }
-          renderQuota();
-          showMsg("Upload gagal: " + e.message + ". Coba lagi.", "error");
-          return;
-        }
-
-        // e. Sukses: tampilkan pemakaian, lalu nyalakan kamera lagi bila kuota masih ada
-        renderQuota();
-        showCamera();
-        if (used < MAX) await openCamera();
-        // Pesan error kamera (bila ada) lebih penting daripada pesan sukses
-        if (!ui.msg.classList.contains("error")) showMsg(`Berhasil! Terpakai ${used}/${MAX} foto`, "ok");
-      } finally {
-        ui.btnUpload.disabled = ui.btnRetake.disabled = false;
-      }
-    }
-
-    // Event: buka kamera, ganti kamera, jepret, foto ulang, upload
-    ui.btnCamera.addEventListener("click", openCamera);
-    ui.btnFlip.addEventListener("click", flipCamera);
-    ui.btnShoot.addEventListener("click", shoot);
-    ui.btnRetake.addEventListener("click", () => { showCamera(); openCamera(); });
-    ui.btnUpload.addEventListener("click", upload);
-
-    // Matikan kamera saat tab ditinggalkan agar baterai dan privasi Tamu terjaga
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) stopCamera();
-    });
-
-    // Login anonim otomatis saat halaman dibuka, lalu baca kuota tamu
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        signInAnonymously(auth).catch((e) => showMsg("Gagal masuk: " + e.message, "error"));
-        return;
-      }
-      uid = user.uid;
-      try {
-        const snap = await getDoc(userRef());
-        used = snap.exists() ? snap.data().count : 0;
-        renderQuota();
-      } catch (e) {
-        showMsg("Gagal memuat kuota: " + e.message, "error");
+        $("btnJoin").disabled = false;
       }
     });
   </script>

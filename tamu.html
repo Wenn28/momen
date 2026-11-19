@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Kirim Foto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Kolom kanan putih: area aksi, dipisah dari cerita acara di kiri */
+    .tools { background: var(--surface); border-left: 1.5px solid var(--line); }
+    .tools > * { width: 100%; max-width: 460px; }
+    .quota { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .quota strong { font-family: var(--display); font-size: 28px; }
+    .bar { height: 8px; border-radius: 4px; background: #EFE6D8; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+    .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .thumbs img, .thumbs .more { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: var(--sand); }
+    .thumbs .more { display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--muted); }
+    .progress { display: flex; flex-direction: column; gap: 12px; }
+    .progress .row { display: flex; align-items: baseline; justify-content: space-between; font-weight: 700; }
+    @media (max-width: 860px) { .tools { border-left: 0; border-top: 1.5px solid var(--line); } }
+  </style>
+</head>
+<body>
+  <!-- Room tidak ditemukan / gagal dimuat -->
+  <main id="errorView" class="split" hidden>
+    <div>
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <h1 class="display" style="font-size: 44px">Room tidak ditemukan</h1>
+      <p class="msg" id="errorMsg" data-type="error"></p>
+      <a class="btn btn-primary" href="index.html" style="align-self: flex-start">Masukkan kode lain</a>
+    </div>
+  </main>
+
+  <div id="roomView" class="split" hidden>
+    <!-- Kiri: identitas acara -->
+    <main>
+      <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <a class="brand" href="index.html">momen<span>.</span></a>
+        <span class="chip">Tanpa akun</span>
+      </header>
+      <section class="event" aria-labelledby="roomName">
+        <p class="eyebrow">Room <span id="roomCode"></span></p>
+        <h1 class="name" id="roomName"></h1>
+        <p class="date" id="roomDate"></p>
+      </section>
+      <div>
+        <h2 class="display" style="font-size: clamp(34px, 4.4vw, 56px)">Abadikan, lalu <em>kumpul</em> di satu room.</h2>
+        <p class="muted" style="margin: 12px 0 0; font-size: 17px; max-width: 36ch" id="roomNote">Fotomu langsung masuk ke room tuan rumah.</p>
+      </div>
+    </main>
+
+    <!-- Kanan: kirim foto -->
+    <aside class="tools">
+      <div class="quota">
+        <span class="label">Kuota fotomu</span>
+        <span id="quota" class="muted">Memuat…</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <!-- Dua input tersembunyi: kamera bawaan HP, atau galeri (boleh banyak sekaligus) -->
+        <input type="file" id="fileCamera" accept="image/*" capture="environment" hidden>
+        <input type="file" id="fileGallery" accept="image/*" multiple hidden>
+        <button class="btn btn-primary btn-lg" id="btnCamera" disabled>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Foto sekarang
+        </button>
+        <button class="btn btn-secondary btn-lg" id="btnGallery" disabled>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>
+          Pilih dari galeri
+        </button>
+      </div>
+
+      <!-- Progres pengiriman: muncul setelah foto pertama dipilih -->
+      <section class="card progress" id="progress" hidden aria-live="polite">
+        <div class="row"><span id="progText">Mengirim</span><span class="muted" id="progPct">0%</span></div>
+        <div class="bar" aria-hidden="true"><span id="progBar"></span></div>
+        <div class="thumbs" id="thumbs"></div>
+      </section>
+
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      <a class="btn btn-secondary" id="galleryLink" hidden>Lihat galeri room</a>
+    </aside>
+  </div>
+
+  <script type="module">
+    import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { doc, getDoc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { auth, db, $, showMsg, roomParam, loadRoom, formatDate } from "./app.js";
+    import { APPS_SCRIPT_URL } from "./firebase-config.js";
+
+    const MAX_BYTES = 2 * 1024 * 1024; // harus sama dengan apps-script/Code.gs
+    const code = roomParam();
+    let room = null;   // data room dari Firestore
+    let uid = null;    // UID Tamu anonim
+    let used = 0;      // foto yang sudah terpakai di room ini
+    let busy = false;  // antrean sedang berjalan
+
+    const userRef = () => doc(db, "rooms", code, "users", uid);
+
+    // Tampilkan sisa kuota; kunci tombol bila habis atau sedang mengirim
+    function renderQuota() {
+      const left = room.quota - used;
+      $("quota").innerHTML = "";
+      const strong = document.createElement("strong");
+      strong.textContent = left;
+      $("quota").append(strong, ` dari ${room.quota} tersisa`);
+      $("btnCamera").disabled = $("btnGallery").disabled = busy || left <= 0;
+      if (left <= 0 && !busy) showMsg($("msg"), `Kuota ${room.quota} foto sudah habis. Terima kasih sudah berbagi!`);
+    }
+
+    // Muat file gambar menjadi <img> agar bisa digambar ke canvas (orientasi EXIF ikut diterapkan browser)
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("File bukan gambar yang bisa dibaca")); };
+        img.src = url;
+      });
+    }
+
+    // Kompres: sisi terpanjang maks 1280px, JPEG 0.7; turunkan kualitas bila masih di atas 2 MB
+    async function compress(file) {
+      const img = await loadImage(file);
+      const scale = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      for (const q of [0.7, 0.55, 0.4]) {
+        const out = await new Promise((r) => canvas.toBlob(r, "image/jpeg", q));
+        if (out && out.size < MAX_BYTES) return out;
+      }
+      throw new Error("Foto terlalu besar setelah dikompres");
+    }
+
+    // Blob → base64 tanpa awalan data:
+    const toBase64 = (b) => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(",")[1]);
+      r.onerror = () => reject(new Error("Gagal membaca foto"));
+      r.readAsDataURL(b);
+    });
+
+    // Kirim ke Apps Script → Google Drive; text/plain agar tidak ada preflight CORS
+    async function sendToDrive(blob) {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ idToken: await auth.currentUser.getIdToken(), roomId: code, image: await toBase64(blob) }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      return data.fileId;
+    }
+
+    // Ubah kuota secara atomik; tolak bila sudah penuh
+    const changeCount = (delta) => runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef());
+      const count = snap.exists() ? snap.data().count : 0;
+      if (delta > 0 && count >= room.quota) throw new Error("KUOTA_HABIS");
+      const next = Math.max(0, count + delta);
+      tx.set(userRef(), { count: next });
+      return next;
+    });
+
+    // Satu foto: kuota +1 → Drive → catatan Firestore; kuota dikembalikan bila gagal
+    async function uploadOne(blob) {
+      used = await changeCount(+1);
+      try {
+        const fileId = await sendToDrive(blob);
+        const photoId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        await setDoc(doc(db, "rooms", code, "photos", photoId), {
+          uid, fileId, createdAt: serverTimestamp(), hidden: room.requireApproval,
+        });
+      } catch (err) {
+        try { used = await changeCount(-1); } catch { /* kuota tetap terpakai bila rollback juga gagal */ }
+        throw err;
+      }
+    }
+
+    // Perbarui kartu progres: teks, persen, dan 5 thumbnail terakhir
+    const sent = [];
+    function renderProgress(done, total) {
+      $("progress").hidden = false;
+      $("progText").textContent = done < total ? `Mengirim ${done + 1}/${total}` : `Terkirim ${done}/${total}`;
+      const pct = Math.round((done / total) * 100);
+      $("progPct").textContent = pct + "%";
+      $("progBar").style.width = pct + "%";
+      const items = sent.slice(-5).map((url) => Object.assign(document.createElement("img"), { src: url, alt: "", width: 52, height: 52 }));
+      if (sent.length > 5) items.unshift(Object.assign(document.createElement("div"), { className: "more", textContent: `+${sent.length - 5}` }));
+      $("thumbs").replaceChildren(...items);
+    }
+
+    // Antrean: kirim berurutan sampai selesai atau kuota habis
+    async function sendFiles(files) {
+      const left = room.quota - used;
+      const list = Array.from(files).slice(0, left);
+      if (!list.length) return;
+      busy = true; renderQuota();
+      showMsg($("msg"), files.length > left ? `Hanya ${left} foto pertama yang dikirim karena kuota tersisa ${left}.` : "");
+      let done = 0, failed = 0;
+      for (const file of list) {
+        renderProgress(done, list.length);
+        try {
+          const blob = await compress(file);
+          await uploadOne(blob);
+          sent.push(URL.createObjectURL(blob));
+        } catch (err) {
+          if (err.message === "KUOTA_HABIS") { used = room.quota; break; }
+          failed++;
+          showMsg($("msg"), `Foto ${done + 1} gagal: ${err.message}`, "error");
+        }
+        done++;
+      }
+      busy = false;
+      renderProgress(done, list.length);
+      renderQuota();
+      if (!failed) {
+        const note = room.requireApproval ? " Foto tampil di layar setelah disetujui Host." : " Fotomu sudah di layar acara.";
+        showMsg($("msg"), `Berhasil! ${done - failed} foto terkirim.${note}`, "ok");
+      }
+    }
+
+    // Tombol membuka input; value dikosongkan agar foto yang sama tetap bisa dipilih lagi
+    $("btnCamera").onclick = () => { $("fileCamera").value = ""; $("fileCamera").click(); };
+    $("btnGallery").onclick = () => { $("fileGallery").value = ""; $("fileGallery").click(); };
+    $("fileCamera").onchange = (e) => sendFiles(e.target.files);
+    $("fileGallery").onchange = (e) => sendFiles(e.target.files);
+
+    // Tampilkan room tidak ditemukan
+    function fail(text) {
+      $("roomView").hidden = true;
+      $("errorView").hidden = false;
+      $("errorMsg").textContent = text;
+    }
+
+    // Mulai: muat room, login anonim, baca kuota Tamu
+    try {
+      room = await loadRoom(code);
+      if (!room) {
+        fail(code ? `Kode room ${code} tidak ada. Pastikan kodenya benar.` : "Link ini tidak memuat kode room.");
+      } else {
+        document.title = `Momen: ${room.name}`;
+        $("roomCode").textContent = room.id;
+        $("roomName").textContent = room.name;
+        $("roomDate").textContent = [formatDate(room.date), room.location].filter(Boolean).join(" · ");
+        if (room.requireApproval) $("roomNote").textContent = "Fotomu masuk ke room tuan rumah dan tampil di layar setelah disetujui Host.";
+        if (room.guestGallery) { $("galleryLink").hidden = false; $("galleryLink").href = `galeri.html?r=${code}`; }
+        $("roomView").hidden = false;
+
+        onAuthStateChanged(auth, async (user) => {
+          if (!user) { signInAnonymously(auth).catch((e) => showMsg($("msg"), "Gagal masuk: " + e.message, "error")); return; }
+          uid = user.uid;
+          try {
+            const snap = await getDoc(userRef());
+            used = snap.exists() ? snap.data().count : 0;
+            renderQuota();
+          } catch (e) {
+            showMsg($("msg"), "Gagal memuat kuota: " + e.message, "error");
+          }
+        });
+      }
+    } catch (e) {
+      fail("Gagal memuat room: " + e.message);
+    }
+  </script>
+</body>
+</html>

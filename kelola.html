@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Kelola Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+  <style>
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .stats .card { min-width: 0; padding: 16px 18px; overflow-wrap: anywhere; }
+    .stats strong { display: block; margin-top: 2px; font-family: var(--display); font-size: 32px; font-weight: 600; }
+    .work { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+    .photos { flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .tile { position: relative; border-radius: 16px; overflow: hidden; background: var(--sand); }
+    .tile img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+    .tile.is-hidden img { opacity: .4; }
+    .tile .badge { position: absolute; left: 8px; top: 8px; }
+    .tile .bar { display: flex; gap: 6px; padding: 8px; background: var(--surface); border: 1.5px solid var(--line); border-top: 0; border-radius: 0 0 16px 16px; }
+    .tile .bar .btn { flex: 1; min-height: 44px; padding: 0 10px; font-size: 14px; }
+    .tile .bar .btn.icon { flex: none; width: 44px; padding: 0; }
+    .share { flex: 0 1 300px; min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 24px; }
+    .qr { width: 100%; max-width: 240px; align-self: center; padding: 10px; background: #fff; border-radius: 16px; }
+    .qr svg { display: block; width: 100%; height: auto; }
+    .linkbox { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--sand); }
+    .linkbox span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .code { font-family: var(--display); font-size: 34px; font-weight: 600; letter-spacing: 6px; text-align: center; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: 600 14px var(--body); }
+    .pill:hover { border-color: var(--line-strong); }
+    .pill[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+    @media (max-width: 860px) { .stats { gap: 8px; } .stats .card { padding: 12px; font-size: 13px; } .stats strong { font-size: 24px; } .share { position: static; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <nav aria-label="Menu Host">
+        <a class="nav" href="host.html">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>
+          Room saya
+        </a>
+        <a class="nav" href="buat.html">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Buat room
+        </a>
+      </nav>
+      <div class="who"><span id="who"></span><button class="btn btn-secondary" id="btnLogout" type="button">Keluar</button></div>
+    </aside>
+
+    <main class="content">
+      <div class="empty" id="state"><div class="spinner" aria-hidden="true"></div><p style="margin: 0">Memuat room…</p></div>
+
+      <div id="roomView" hidden style="display: contents">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Room <span id="roomCode"></span></p>
+            <h1 class="display" id="roomName"></h1>
+            <p class="muted" id="roomDate" style="margin: 2px 0 0"></p>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <a class="btn btn-secondary" id="linkQr">Cetak kartu QR</a>
+            <a class="btn btn-primary" id="linkLive" target="_blank" rel="noopener">Buka Live Screen</a>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="card"><span class="muted">Foto masuk</span><strong id="sTotal">0</strong></div>
+          <div class="card"><span class="muted">Tampil</span><strong id="sShown">0</strong></div>
+          <div class="card"><span class="muted" id="sHiddenLabel">Disembunyikan</span><strong id="sHidden">0</strong></div>
+        </div>
+
+        <div class="work">
+          <section class="photos" aria-labelledby="photosTitle">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+              <h2 id="photosTitle">Foto tamu</h2>
+              <div class="tabs" role="group" aria-label="Saring foto">
+                <button class="pill" type="button" data-f="all" aria-pressed="true">Semua</button>
+                <button class="pill" type="button" data-f="hidden" aria-pressed="false" id="tabHidden">Disembunyikan</button>
+                <button class="pill" type="button" data-f="shown" aria-pressed="false">Tampil</button>
+              </div>
+            </div>
+            <p class="msg" id="msg" role="status" aria-live="polite"></p>
+            <div class="empty" id="photoState">Belum ada foto. Bagikan kode room ke tamu.</div>
+            <div class="grid" id="grid" hidden></div>
+          </section>
+
+          <aside class="card share" aria-labelledby="shareTitle">
+            <h2 id="shareTitle">Bagikan ke tamu</h2>
+            <div class="qr" id="qr" role="img" aria-label="Kode QR link room"></div>
+            <p class="code" id="bigCode"></p>
+            <div class="linkbox">
+              <span id="guestLink"></span>
+              <button class="btn btn-dark" id="btnCopy" type="button" style="min-height: 40px; padding: 0 14px; font-size: 14px">Salin</button>
+            </div>
+            <p class="muted" style="margin: 0; font-size: 14px">Tamu cukup scan QR, atau buka halaman utama Momen dan ketik kode room. Tidak perlu akun.</p>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { db, $, showMsg, requireHost, roomParam, loadRoom, formatDate, driveImg, driveDownload, guestUrl, qrSvg } from "./app.js";
+
+    const code = roomParam();
+    let room = null;
+    let photos = [];   // [{ id, ...data }] dari snapshot terbaru
+    let filter = "all";
+    const tiles = new Map(); // kartu foto per id, dipakai ulang
+
+    // Kata yang dipakai untuk foto tersembunyi tergantung pengaturan room
+    const hiddenWord = () => (room.requireApproval ? "Menunggu" : "Disembunyikan");
+
+    // Kartu satu foto: gambar, label status, tombol Setujui/Tampilkan/Sembunyikan, unduh
+    function tileFor(p) {
+      let t = tiles.get(p.id);
+      if (!t) {
+        t = document.createElement("article");
+        t.innerHTML = `<img alt="Foto tamu" loading="lazy" width="300" height="300"><span class="chip chip-dark badge" hidden></span>
+          <div class="bar"><button class="btn btn-secondary" type="button"></button>
+          <a class="btn btn-secondary icon" target="_blank" rel="noopener" aria-label="Unduh foto">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></a></div>`;
+        t.querySelector("img").src = driveImg(p.fileId, 400);
+        t.querySelector("a").href = driveDownload(p.fileId);
+        tiles.set(p.id, t);
+      }
+      t.className = "tile" + (p.hidden ? " is-hidden" : "");
+      const badge = t.querySelector(".badge");
+      badge.hidden = !p.hidden;
+      badge.textContent = hiddenWord();
+      const btn = t.querySelector("button");
+      btn.textContent = p.hidden ? (room.requireApproval ? "Setujui" : "Tampilkan") : "Sembunyikan";
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try { await updateDoc(doc(db, "rooms", code, "photos", p.id), { hidden: !p.hidden }); }
+        catch (e) { showMsg($("msg"), "Gagal mengubah foto: " + e.message, "error"); }
+        finally { btn.disabled = false; }
+      };
+      return t;
+    }
+
+    // Statistik + grid sesuai saringan
+    function render() {
+      const hidden = photos.filter((p) => p.hidden).length;
+      const more = photos.length >= 500 ? "+" : "";
+      $("sTotal").textContent = photos.length + more;
+      $("sShown").textContent = photos.length - hidden;
+      $("sHidden").textContent = hidden;
+      const list = photos.filter((p) => filter === "all" || (filter === "hidden") === !!p.hidden);
+      $("photoState").hidden = !!list.length;
+      $("photoState").textContent = photos.length ? "Tidak ada foto di saringan ini." : "Belum ada foto. Bagikan kode room ke tamu.";
+      $("grid").hidden = !list.length;
+      $("grid").replaceChildren(...list.map(tileFor));
+    }
+
+    document.querySelectorAll("[data-f]").forEach((b) => b.onclick = () => {
+      filter = b.dataset.f;
+      document.querySelectorAll("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      render();
+    });
+
+    // Salin link Tamu ke clipboard
+    $("btnCopy").onclick = async () => {
+      try { await navigator.clipboard.writeText(guestUrl(code)); $("btnCopy").textContent = "Tersalin"; }
+      catch { $("btnCopy").textContent = "Salin manual"; }
+      setTimeout(() => { $("btnCopy").textContent = "Salin"; }, 2000);
+    };
+
+    function fail(text) {
+      $("state").hidden = false;
+      $("state").innerHTML = "";
+      const p = document.createElement("p");
+      p.style.margin = "0";
+      p.textContent = text;
+      const a = Object.assign(document.createElement("a"), { className: "btn btn-secondary", href: "host.html", textContent: "Kembali ke Room saya" });
+      $("state").append(p, a);
+    }
+
+    requireHost(async (user) => {
+      try {
+        room = await loadRoom(code);
+        if (!room) return fail("Room tidak ditemukan.");
+        if (room.ownerUid !== user.uid) return fail("Room ini milik Host lain.");
+        document.title = `Kelola: ${room.name}`;
+        $("roomCode").textContent = $("bigCode").textContent = room.id;
+        $("roomName").textContent = room.name;
+        $("roomDate").textContent = [formatDate(room.date), room.location].filter(Boolean).join(" · ");
+        $("linkQr").href = `qr.html?r=${code}`;
+        $("linkLive").href = `live.html?r=${code}`;
+        $("guestLink").textContent = guestUrl(code);
+        $("sHiddenLabel").textContent = $("tabHidden").textContent = hiddenWord();
+        $("qr").innerHTML = qrSvg(guestUrl(code));
+        $("state").hidden = true;
+        $("roomView").hidden = false;
+
+        // 500 foto terbaru, realtime
+        const q = query(collection(db, "rooms", code, "photos"), orderBy("createdAt", "desc"), limit(500));
+        onSnapshot(q, (snap) => {
+          photos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          render();
+        }, (e) => showMsg($("msg"), "Gagal memuat foto: " + e.message, "error"));
+      } catch (e) {
+        fail("Gagal memuat room: " + e.message);
+      }
+    });
+  </script>
+</body>
+</html>

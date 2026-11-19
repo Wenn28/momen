@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Kartu QR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+  <style>
+    .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px 16px; }
+    .tools { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    /* Kartu 16:9 mendatar: kiri cerita acara, kanan QR yang dipindai tamu */
+    .card16 { width: min(960px, 100%); aspect-ratio: 16 / 9; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); overflow: hidden; border-radius: 24px; background: var(--surface); border: 1.5px solid var(--line); }
+    .card16 .story { padding: clamp(20px, 4vw, 44px); display: flex; flex-direction: column; justify-content: space-between; gap: 12px; background: var(--sand); }
+    .card16 .name { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(26px, 4vw, 46px); line-height: 1.05; letter-spacing: -1px; }
+    .card16 .scan { padding: clamp(16px, 3vw, 36px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+    .card16 .qr { width: min(100%, 300px); }
+    .card16 .qr svg { display: block; width: 100%; height: auto; }
+    .card16 .code { margin: 0; font-family: var(--display); font-size: clamp(22px, 3vw, 34px); font-weight: 600; letter-spacing: 5px; }
+    @media (max-width: 560px) { .card16 { aspect-ratio: auto; grid-template-columns: 1fr; } }
+    /* Cetak: hanya kartu, A5 mendatar, tanpa tombol */
+    @page { size: A5 landscape; margin: 8mm; }
+    @media print {
+      body { background: #fff; }
+      .tools, .msg { display: none !important; }
+      .page { min-height: 0; padding: 0; }
+      .card16 { width: 100%; border-color: #ccc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="tools">
+      <a class="btn btn-secondary" id="back">&larr; Kembali ke room</a>
+      <button class="btn btn-primary" id="btnPrint" type="button" disabled>Cetak kartu</button>
+    </div>
+    <p class="msg" id="msg" role="status" aria-live="polite">Memuat room…</p>
+
+    <article class="card16" id="card" hidden aria-label="Kartu QR room">
+      <div class="story">
+        <span class="brand">momen<span>.</span></span>
+        <div>
+          <h1 class="name" id="name"></h1>
+          <p class="muted" id="date" style="margin: 8px 0 0"></p>
+        </div>
+        <p style="margin: 0; font-size: clamp(14px, 1.6vw, 18px)">Bantu kami <em style="font-family: var(--display); color: var(--accent)">mengabadikan</em> hari ini. Fotomu langsung tampil di layar acara.</p>
+      </div>
+      <div class="scan">
+        <div class="qr" id="qr" role="img" aria-label="Kode QR untuk mengirim foto"></div>
+        <p class="muted" style="margin: 0; font-size: 14px">Scan dengan kamera HP, atau ketik kode di <span id="site"></span></p>
+        <p class="code" id="code"></p>
+      </div>
+    </article>
+  </main>
+
+  <script type="module">
+    import { $, showMsg, roomParam, loadRoom, formatDate, guestUrl, qrSvg } from "./app.js";
+
+    const code = roomParam();
+    $("back").href = `kelola.html?r=${code}`;
+    $("btnPrint").onclick = () => window.print();
+
+    try {
+      const room = await loadRoom(code);
+      if (!room) showMsg($("msg"), "Room tidak ditemukan.", "error");
+      else {
+        document.title = `Kartu QR: ${room.name}`;
+        $("name").textContent = room.name;
+        $("date").textContent = [formatDate(room.date), room.location].filter(Boolean).join(" · ");
+        $("code").textContent = room.id;
+        $("site").textContent = new URL("./", location.href).host + new URL("./", location.href).pathname;
+        $("qr").innerHTML = qrSvg(guestUrl(code), 8);
+        $("card").hidden = false;
+        $("btnPrint").disabled = false;
+        showMsg($("msg"), "");
+      }
+    } catch (e) {
+      showMsg($("msg"), "Gagal memuat room: " + e.message, "error");
+    }
+  </script>
+</body>
+</html>

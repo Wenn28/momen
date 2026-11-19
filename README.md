@@ -1,74 +1,86 @@
-# Momen Clone
+# Momen
 
-Aplikasi upload foto acara. HTML, CSS, dan JavaScript murni, tanpa build step, **Rp0 tanpa kartu kredit**.
+Aplikasi foto acara. Host membuat **room**, tamu bergabung dengan kode room atau scan QR, lalu foto tamu tampil di Live Screen. HTML, CSS, dan JavaScript murni, tanpa build step, **Rp0 tanpa kartu kredit**.
 
-- **Firebase (paket gratis Spark)**: login Tamu dan Admin, Kuota Foto, daftar foto realtime.
-- **Google Drive + Apps Script**: menyimpan file foto. Alasannya ada di [docs/adr/0001-foto-di-google-drive.md](docs/adr/0001-foto-di-google-drive.md).
+- **Firebase (paket Spark gratis):** login Host (Google atau email), login anonim Tamu, data room, kuota, dan daftar foto realtime.
+- **Google Drive + Apps Script:** menyimpan file foto. Alasannya ada di [docs/adr/0001-foto-di-google-drive.md](docs/adr/0001-foto-di-google-drive.md).
 
-| File | Fungsi |
-|------|--------|
-| `index.html` | Halaman Tamu (bagikan lewat link/QR). Login anonim, maks 10 foto per Tamu. |
-| `live.html` | Live Screen untuk proyektor, khusus Admin. |
-| `admin.html` | Dashboard Admin: 500 foto terbaru, Sembunyikan/Tampilkan, link ke folder Drive. |
-| `firebase-config.js` | Config Firebase, `ADMIN_UID`, `EVENT_ID`, `APPS_SCRIPT_URL`. |
-| `apps-script/Code.gs` | Penerima upload, menyimpan foto ke Drive. |
-| `firestore.rules` | Aturan keamanan Firestore. |
-| `GLOSSARY.md` | Istilah project. |
+## Halaman
 
-## 1. Setup Firebase (tanpa kartu)
+| File | Untuk | Isi |
+|------|-------|-----|
+| `index.html` | Tamu | Masukkan kode room. |
+| `tamu.html?r=KODE` | Tamu | Foto sekarang atau pilih dari galeri HP, dengan sisa kuota dan progres kirim. |
+| `galeri.html?r=KODE` | Tamu | Foto yang sudah tampil (bila Host membuka galeri). |
+| `host.html` | Host | Masuk, daftar, lupa kata sandi, lalu daftar room. |
+| `buat.html` | Host | Buat room: nama, tanggal, lokasi, kuota, pengaturan tamu. |
+| `kelola.html?r=KODE` | Host | Statistik, setujui atau sembunyikan foto, unduh per foto, QR dan link room. |
+| `live.html?r=KODE` | Host | Layar proyektor 16:9: foto terbaru, strip foto, QR untuk tamu. |
+| `qr.html?r=KODE` | Host | Kartu QR 16:9 siap cetak (A5 mendatar). |
 
-1. **Buat project** di [Firebase Console](https://console.firebase.google.com) dan tetap di paket **Spark**. Tambahkan **Web app**, lalu salin config ke `firebase-config.js`.
-2. **Authentication > Sign-in method**: aktifkan **Anonymous** dan **Email/Password**.
-3. **Authentication > Users > Add user**: buat akun Admin. Salin **User UID**-nya ke `ADMIN_UID` di `firebase-config.js` dan ke `ADMIN_UID_PLACEHOLDER` di `firestore.rules` (2 tempat).
-4. **Firestore Database > Create database**: pilih **production mode**.
-5. **Firestore > Rules**: salin isi `firestore.rules`, lalu **Publish**. Bisa juga lewat CLI: `firebase deploy --only firestore:rules`.
+`style.css` dan `app.js` dipakai semua halaman. `apps-script/Code.gs` hanya ada di laptop dan di editor Apps Script, tidak di GitHub.
 
-Firebase Storage **tidak** diaktifkan.
+## Peran
+
+- **Pemilik** (Anda): pemilik project Firebase, Drive, dan Apps Script. Menentukan siapa yang boleh menjadi Host.
+- **Host:** orang yang emailnya Anda izinkan. Membuat dan mengelola room miliknya sendiri.
+- **Tamu:** siapa saja yang tahu kode room. Tanpa akun.
+
+## 1. Setup Firebase
+
+1. **Authentication > Sign-in method:** aktifkan **Anonymous**, **Email/Password**, dan **Google**. Untuk Google, isi "Project support email", lalu **Save**.
+2. **Authentication > Settings > Authorized domains:** pastikan domain situs ada, misalnya `wenn28.github.io`.
+3. **Firestore > Rules:** ganti isinya dengan `firestore.rules`, lalu **Publish**.
+4. **Izinkan Host:** di **Firestore > Data**, klik **Start collection**:
+   - Collection ID: `hosts`
+   - Document ID: email Host dalam **huruf kecil**, misalnya `nama@gmail.com`
+   - Field: `nama` (string) berisi nama Host, cukup sebagai catatan
+   - Ulangi **Add document** untuk setiap Host.
+5. **Indeks galeri Tamu:** buka `galeri.html` sebuah room satu kali. Kalau muncul error "The query requires an index", klik link di pesan itu, lalu **Create index**. Bisa juga dibuat manual di **Firestore > Indexes > Composite**: collection `photos`, field `hidden` Ascending lalu `createdAt` Descending, query scope Collection. Tunggu statusnya **Enabled** (beberapa menit).
+
+Host yang mendaftar dengan email dan kata sandi harus memverifikasi email lebih dulu. Login Google tidak perlu, karena emailnya sudah terverifikasi.
 
 ## 2. Setup Google Drive + Apps Script
 
-1. Di [Google Drive](https://drive.google.com), buat folder **Momen**. Buka foldernya, lalu salin ID dari URL (`drive.google.com/drive/folders/<ID>`).
-   - Tulis ID itu ke `ROOT_FOLDER_ID` di `apps-script/Code.gs`. Jangan taruh ID atau URL folder ini di file situs mana pun: folder ini akan dibagikan lewat link, jadi siapa pun yang tahu ID-nya bisa melihat semua foto.
-   - Klik kanan folder **Momen > Share > General access: Anyone with the link, Viewer**. Semua foto di dalamnya ikut bisa dibuka lewat link, sehingga tampil di Live Screen. (Google menolak skrip Web App membagikan file satu per satu.)
-2. Buka [script.google.com](https://script.google.com), lalu **New project**. Ganti isi `Code.gs` dengan file `apps-script/Code.gs` dari repo ini.
-3. Isi `FIREBASE_API_KEY` dengan `apiKey` dari config Firebase.
-4. **Deploy > New deployment > Web app**:
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-5. Izinkan akses Drive saat diminta. Salin **Web app URL** (berakhiran `/exec`) ke `APPS_SCRIPT_URL` di `firebase-config.js`.
-6. Setiap kali `Code.gs` diubah: **Deploy > Manage deployments > Edit > Version: New version**. Tanpa langkah ini, URL lama tetap menjalankan kode lama.
+1. Di Drive, buat folder **Momen**. Salin ID dari URL folder (`drive.google.com/drive/folders/<ID>`) ke `ROOT_FOLDER_ID` di `apps-script/Code.gs`.
+   - Klik kanan folder **Momen > Share > General access: Anyone with the link, Viewer**. Semua foto di dalamnya ikut bisa dibuka lewat link, sehingga tampil di Live Screen.
+   - **Jangan** taruh ID folder ini di file situs mana pun. Siapa pun yang tahu ID-nya bisa melihat foto semua room.
+2. Di `Code.gs`, isi juga `FIREBASE_API_KEY` (apiKey dari config Firebase) dan `FIREBASE_PROJECT_ID` (misalnya `momen-4f310`).
+3. Di [script.google.com](https://script.google.com), tempel seluruh `Code.gs`, lalu **Save**.
+4. **Deploy:** pertama kali, pakai **Deploy > New deployment > Web app** (Execute as: **Me**, Who has access: **Anyone**). Salin URL `/exec` ke `APPS_SCRIPT_URL` di `firebase-config.js`.
+5. Setiap kali `Code.gs` berubah: **Deploy > Manage deployments > pensil > Version: New version > Deploy**. URL tetap sama.
 
-## 3. Hosting
+## 3. Hosting (GitHub Pages)
 
-Halaman harus dibuka lewat HTTP/HTTPS, bukan `file://`, karena ES modules tidak jalan dari file lokal.
+```
+git add -A
+git commit -m "pesan perubahan"
+git push
+```
 
-Kamera di halaman Tamu hanya menyala di **HTTPS** atau `localhost`. Membuka `http://192.168.x.x:8000` dari HP lain akan gagal dengan pesan "Kamera hanya bisa dibuka lewat alamat https://". Untuk tes di HP, pakai GitHub Pages atau Firebase Hosting (keduanya HTTPS).
+Situs ter-update sekitar 1 menit setelah push. Kamera HP butuh HTTPS, dan GitHub Pages sudah HTTPS. Untuk tes lokal, pakai `npx serve` lalu buka `http://localhost:3000`.
 
-- **Tes lokal**: `npx serve` atau `python -m http.server 8000`, lalu buka `http://localhost:8000`.
-- **GitHub Pages**: push folder ini ke repo GitHub, lalu buka **Settings > Pages** dan pilih branch `main`, folder `/ (root)`. Tambahkan `<username>.github.io` di **Firebase > Authentication > Settings > Authorized domains**.
-- **Firebase Hosting** (gratis di Spark): `firebase deploy --only hosting`. Hasilnya `https://<project-id>.web.app`.
+## Alur pemakaian
 
-Bagikan URL `index.html` ke Tamu (misalnya sebagai QR). Buka `live.html` di proyektor, dan `admin.html` untuk moderasi.
+1. Host masuk di `host.html`, lalu **Buat room**. Kode room 6 karakter dibuat otomatis.
+2. Di halaman kelola room, Host mencetak kartu QR atau menyalin link untuk tamu.
+3. Tamu scan QR (atau membuka situs dan mengetik kode), lalu memotret atau memilih foto dari galeri.
+4. Host membuka **Live Screen** di laptop yang tersambung ke proyektor. Kalau room memakai persetujuan, foto baru tampil setelah Host menekan **Setujui**.
+5. Setelah acara, Host mengunduh foto satu per satu dari halaman kelola. Pemilik bisa mengunduh semua foto room dari folder `Momen/<KODE>` di Drive (klik kanan, **Download** jadi ZIP).
 
-## 4. Per Acara
+## Saat Drive penuh
 
-1. Ganti `EVENT_ID` di `firebase-config.js` (hanya huruf, angka, `-`, `_`), lalu deploy ulang hosting.
-2. Setelah Acara selesai, buka folder `Momen/<EVENT_ID>` di Drive, klik kanan, lalu **Download**. Drive membuat file ZIP.
-
-## 5. Saat Drive penuh
-
-Satu Acara dengan 500+ Tamu memakan sekitar 1,5 GB. Cek ruang kosong di [drive.google.com/settings/storage](https://drive.google.com/settings/storage). Ingat bahwa 15 GB dibagi dengan Gmail dan Google Photos.
-
-Untuk memindahkan Acara lama ke disk:
-1. Unduh folder `Momen/<EVENT_ID>` sebagai ZIP, lalu simpan di laptop atau HDD eksternal.
-2. Hapus folder itu dari Drive, lalu kosongkan **Trash**. Ruang baru kembali setelah Trash dikosongkan.
-3. Di **Firestore > Data**, hapus `events/<EVENT_ID>`. Kalau tidak dihapus, Admin akan menampilkan gambar yang rusak.
+15 GB dibagi dengan Gmail dan Google Photos akun pemilik. Satu room dengan 500+ tamu bisa memakan sekitar 1,5 GB.
+1. Unduh folder `Momen/<KODE>` room lama sebagai ZIP, lalu simpan di disk sendiri.
+2. Hapus folder itu dari Drive, lalu kosongkan **Trash**.
+3. Di **Firestore > Data**, hapus dokumen `rooms/<KODE>` beserta subkoleksinya. Kalau tidak, halaman kelola room itu akan menampilkan gambar rusak.
 
 ## Batasan
 
-- **Kuota Foto**: Apps Script menghitung file di folder Drive tiap Tamu, jadi mereset `count` di Firestore tidak menambah kuota. Dua upload serentak dari Tamu yang sama bisa lolos 1 foto ekstra.
-- **Kapasitas**: Apps Script menangani sekitar 30 upload bersamaan. Firestore Spark mengizinkan 20 ribu tulis per hari, cukup untuk sekitar 1.000 Tamu aktif per hari.
-- **Privasi**: foto bisa dibuka siapa saja yang punya link-nya. ID file Drive panjang dan acak.
-- **Tampilan**: gambar memakai endpoint thumbnail Drive yang tidak resmi. Endpoint ini bisa lambat atau dibatasi saat trafik sangat tinggi.
-- **Catatan palsu**: Tamu yang paham teknis bisa membuat dokumen foto dengan `fileId` sembarang. Akibatnya hanya muncul gambar rusak atau gambar lain yang memang sudah publik, dan Admin bisa menyembunyikannya.
-- **UID anonim**: menghapus data situs atau ganti browser menghasilkan UID anonim baru, sehingga kuota juga baru.
+- **Pengaturan room tidak bisa diubah** setelah dibuat (nama, kuota, persetujuan, galeri). Buat room baru bila perlu.
+- **Hapus foto** tidak ada. Host hanya bisa menyembunyikan. File tetap ada di Drive pemilik.
+- **Unduh semua (ZIP)** hanya bisa oleh pemilik lewat Drive. Host mengunduh per foto.
+- **Kuota Foto** dijaga dua kali: oleh Firestore, dan oleh Apps Script yang menghitung file di folder Drive tiap tamu. Dua upload serentak dari tamu yang sama bisa lolos 1 foto ekstra.
+- **Kapasitas Spark:** sekitar 20 ribu tulis dan 50 ribu baca per hari. Setiap tamu yang membuka galeri membaca hingga 60 foto. Acara sangat besar bisa mencapai batas baca harian.
+- **Gambar** memakai endpoint thumbnail Google Drive yang tidak resmi, jadi bisa lambat saat trafik sangat tinggi.
+- **Privasi:** foto bisa dibuka siapa saja yang punya link foto itu.

@@ -4,123 +4,124 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Momen: Live Screen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
   <style>
-    /* Dasar: layar penuh hitam untuk proyektor */
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: #000; color: #eee; font-family: system-ui, sans-serif; }
-    [hidden] { display: none !important; }
-
-    /* Form login admin */
-    .login { max-width: 360px; margin: 10vh auto; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
-    .login input, .login button { padding: 14px; font-size: 1rem; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #eee; }
-    .login button { background: #f5c542; color: #111; border: 0; font-weight: 600; cursor: pointer; }
-    .error { color: #ff6b6b; min-height: 1.5em; margin: 0; }
-
-    /* Tata letak live: header, foto utama, strip thumbnail */
-    .live { height: 100%; display: flex; flex-direction: column; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; font-size: 1.2rem; }
-    #main { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; }
-    .strip { display: flex; gap: 8px; padding: 10px 20px; overflow-x: auto; height: 16vh; }
-    .strip img { height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; flex: none; }
-    .empty { flex: 1; display: grid; place-items: center; color: #777; font-size: 1.5rem; }
+    /* Latar gelap hangat: foto paling menonjol di proyektor, warna tetap satu keluarga dengan krem */
+    body { background: #14110F; color: #F4EDE4; overflow: hidden; }
+    .stage { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) clamp(220px, 20vw, 320px); grid-template-rows: auto minmax(0, 1fr) clamp(90px, 15vh, 150px); gap: 16px; padding: 20px 24px; }
+    header { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+    header .brand { color: #F4EDE4; }
+    header .title { font-family: var(--display); font-size: clamp(22px, 2.4vw, 34px); font-weight: 600; }
+    .dim { color: #B5AA9D; }
+    #main { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; animation: in .6s ease; }
+    @keyframes in { from { opacity: 0; } to { opacity: 1; } }
+    .info { grid-row: 2 / 4; grid-column: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; border-radius: 20px; background: #221D19; text-align: center; }
+    .info .qr { width: 100%; padding: 10px; background: #fff; border-radius: 14px; }
+    .info .qr svg { display: block; width: 100%; height: auto; }
+    .info .code { font-family: var(--display); font-size: clamp(26px, 2.6vw, 40px); font-weight: 600; letter-spacing: 5px; }
+    .info p { margin: 0; }
+    .strip { display: flex; gap: 10px; overflow: hidden; }
+    .strip img { height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; flex: none; }
+    .wait { display: grid; place-items: center; text-align: center; font-size: clamp(20px, 2vw, 28px); }
+    /* Login: tampil terang seperti halaman Host lain */
+    .login { position: fixed; inset: 0; overflow: auto; background: var(--bg); color: var(--ink); }
+    @media (max-width: 860px) {
+      body { overflow: auto; }
+      .stage { height: auto; grid-template-columns: 1fr; grid-template-rows: auto; }
+      .info { grid-row: auto; grid-column: auto; }
+      #main, .wait { height: 60vh; }
+      .strip { height: 90px; }
+    }
   </style>
 </head>
 <body>
-  <!-- Layar login admin -->
-  <form class="login" id="loginView" hidden>
-    <h1>Live Screen</h1>
-    <input type="email" id="email" placeholder="Email admin" required autocomplete="username">
-    <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
-    <button type="submit">Masuk</button>
-    <p class="error" id="loginMsg" role="alert"></p>
-  </form>
+  <!-- Belum masuk sebagai Host pemilik room -->
+  <div class="login split" id="loginView" hidden>
+    <main>
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <h1 class="display" style="font-size: 40px">Live Screen khusus Host</h1>
+      <p class="msg" id="loginMsg" data-type="error"></p>
+      <a class="btn btn-primary" href="host.html" style="align-self: flex-start">Masuk sebagai Host</a>
+    </main>
+  </div>
 
-  <!-- Layar live: foto terbaru besar + 12 thumbnail -->
-  <section class="live" id="liveView" hidden>
+  <div class="stage" id="stage" hidden>
     <header>
-      <strong>Momen Live</strong>
-      <span id="counter">0 foto terbaru</span>
+      <div style="display: flex; align-items: baseline; gap: 16px; min-width: 0">
+        <span class="brand">momen<span>.</span></span>
+        <h1 class="title" id="roomName" style="margin: 0"></h1>
+      </div>
+      <span class="dim" id="counter" aria-live="polite">Menunggu foto</span>
     </header>
-    <img id="main" alt="Foto terbaru" hidden>
-    <div class="empty" id="empty">Menunggu foto pertama…</div>
-    <div class="strip" id="strip"></div>
-  </section>
+
+    <main style="display: contents">
+      <img id="main" alt="Foto terbaru dari tamu" width="1920" height="1080" hidden>
+      <div class="wait" id="wait">Menunggu foto pertama.<br><span class="dim">Scan QR di samping untuk mengirim.</span></div>
+    </main>
+
+    <aside class="info" aria-label="Cara mengirim foto">
+      <div class="qr" id="qr" role="img" aria-label="Kode QR untuk mengirim foto"></div>
+      <p class="dim">Scan untuk kirim foto, atau masukkan kode</p>
+      <p class="code" id="code"></p>
+    </aside>
+
+    <footer class="strip" id="strip"></footer>
+  </div>
 
   <script type="module">
-    // Import Firebase SDK modular dari CDN gstatic
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { firebaseConfig, ADMIN_UID, EVENT_ID } from "./firebase-config.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { auth, db, $, roomParam, loadRoom, driveImg, guestUrl, qrSvg } from "./app.js";
 
-    // Inisialisasi layanan Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const code = roomParam();
+    let unsubscribe = null;
 
-    // Referensi elemen UI
-    const $ = (id) => document.getElementById(id);
-
-    let unsubscribe = null; // penghenti listener realtime
-
-    // URL gambar dari Google Drive (file disetel "siapa saja dengan link")
-    // shortcut: endpoint thumbnail Drive tidak resmi dan bisa dibatasi saat trafik tinggi; pindah ke CDN bila sering gagal
-    const driveImg = (fileId, width) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
-
-    // Login email/password
-    $("loginView").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      $("loginMsg").textContent = "";
-      try {
-        await signInWithEmailAndPassword(auth, $("email").value, $("password").value);
-      } catch (err) {
-        $("loginMsg").textContent = "Login gagal: " + err.message;
-      }
-    });
-
-    // Cek status login: hanya ADMIN_UID yang boleh melihat live screen
-    onAuthStateChanged(auth, (user) => {
-      if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-      if (user && user.uid !== ADMIN_UID) {
-        $("loginMsg").textContent = "Akses ditolak";
-        signOut(auth);
-        return;
-      }
-      $("loginView").hidden = !!user;
-      $("liveView").hidden = !user;
-      if (user) startLive();
-    });
-
-    // Listener realtime: 30 foto terbaru, urut paling baru
-    function startLive() {
-      const q = query(
-        collection(db, "events", EVENT_ID, "photos"),
-        orderBy("createdAt", "desc"),
-        limit(30),
-      );
-      unsubscribe = onSnapshot(q, (snap) => render(snap.docs.map((d) => d.data())),
-        (err) => { $("empty").hidden = false; $("empty").textContent = "Gagal memuat: " + err.message; });
+    function denied(text) {
+      $("stage").hidden = true;
+      $("loginView").hidden = false;
+      $("loginMsg").textContent = text;
     }
 
-    // Tampilkan foto terbaru di layar utama dan 12 thumbnail di strip bawah (Foto Tersembunyi dilewati)
+    // Foto terbaru (yang tidak disembunyikan) besar, 12 berikutnya di strip bawah
     function render(photos) {
-      const visible = photos.filter((p) => !p.hidden);
-      $("counter").textContent = `${visible.length} foto terbaru`;
-
-      $("empty").hidden = visible.length > 0;
-      $("main").hidden = visible.length === 0;
-      if (visible[0]) {
-        const src = driveImg(visible[0].fileId, 1600);
-        if ($("main").src !== src) $("main").src = src;
+      const shown = photos.filter((p) => !p.hidden);
+      $("counter").textContent = shown.length ? `${shown.length} foto terbaru` : "Menunggu foto";
+      $("wait").hidden = shown.length > 0;
+      $("main").hidden = shown.length === 0;
+      if (shown[0]) {
+        const src = driveImg(shown[0].fileId, 1920);
+        // Animasi masuk singkat hanya saat foto utama berganti: menandai ada kiriman baru
+        if ($("main").src !== src) { $("main").src = src; $("main").style.animation = "none"; void $("main").offsetWidth; $("main").style.animation = ""; }
       }
-
-      $("strip").replaceChildren(...visible.slice(0, 12).map((p) => {
-        const img = document.createElement("img");
-        img.src = driveImg(p.fileId, 400);
-        img.alt = "";
-        return img;
-      }));
+      $("strip").replaceChildren(...shown.slice(1, 13).map((p) =>
+        Object.assign(document.createElement("img"), { src: driveImg(p.fileId, 300), alt: "", width: 150, height: 150 })));
     }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+      if (!user || user.isAnonymous) return denied("Masuk dengan akun Host pemilik room ini untuk membuka Live Screen.");
+      try {
+        const room = await loadRoom(code);
+        if (!room) return denied("Room tidak ditemukan.");
+        if (room.ownerUid !== user.uid) return denied("Room ini milik Host lain.");
+        document.title = `Live: ${room.name}`;
+        $("roomName").textContent = room.name;
+        $("code").textContent = room.id;
+        $("qr").innerHTML = qrSvg(guestUrl(code), 8);
+        $("loginView").hidden = true;
+        $("stage").hidden = false;
+        // 30 foto terbaru; foto tersembunyi disaring di browser agar tidak butuh indeks gabungan
+        const q = query(collection(db, "rooms", code, "photos"), orderBy("createdAt", "desc"), limit(30));
+        unsubscribe = onSnapshot(q, (snap) => render(snap.docs.map((d) => d.data())),
+          (e) => { $("wait").hidden = false; $("wait").textContent = "Gagal memuat foto: " + e.message; });
+      } catch (e) {
+        denied("Gagal memuat room: " + e.message);
+      }
+    });
   </script>
 </body>
 </html>

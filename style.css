@@ -1,0 +1,115 @@
+/* Gaya bersama semua halaman Momen.
+   Arah desain dari kanvas pemilik: krem hangat, aksen terakota, judul Fraunces, teks Plus Jakarta Sans.
+   Layout dirancang untuk layar 16:9 dan tetap rapi saat dibuka di HP tegak. */
+
+:root {
+  --bg: #FBF8F3;          /* latar krem: hangat seperti kertas undangan */
+  --surface: #FFFFFF;
+  --sand: #F1E9DD;        /* panel sekunder (sidebar, kartu acara) */
+  --line: #E3D9CA;
+  --line-strong: #D9CDBB;
+  --ink: #231F1C;
+  --muted: #6B6158;       /* 5.0:1 di atas --sand, lolos WCAG AA */
+  --accent: #C8431F;      /* satu aksen terakota, hanya untuk aksi utama */
+  --accent-hover: #9E3217;
+  --danger: #B3261E;
+  --ok: #1F5A3A;
+  --ok-bg: #E3F0E8;
+  --display: "Fraunces", Georgia, serif;
+  --body: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+/* ===== Dasar ===== */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--body); }
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+img { display: block; max-width: 100%; }
+button, a[href], summary, select, label[for], input[type="checkbox"] { cursor: pointer; }
+button:disabled, input:disabled { cursor: not-allowed; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ===== Tipografi ===== */
+.brand { font-family: var(--display); font-weight: 600; font-size: 26px; letter-spacing: -0.5px; color: var(--ink); text-decoration: none; }
+.brand:hover { color: var(--ink); }
+.brand span { color: var(--accent); }
+.display { margin: 0; font-family: var(--display); font-weight: 600; line-height: 1.08; letter-spacing: -1px; }
+/* Motif identitas: satu kata miring berwarna aksen di tiap judul besar */
+.display em { font-style: italic; font-weight: 500; color: var(--accent); }
+.eyebrow { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.muted { color: var(--muted); }
+h2 { margin: 0; font-size: 18px; font-weight: 700; }
+
+/* ===== Tombol ===== */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 20px; border: 1.5px solid transparent; border-radius: 14px; font: 600 16px var(--body); text-decoration: none; transition: background-color .15s, transform .1s; }
+.btn:active { transform: translateY(1px); }
+.btn svg { flex: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); color: #fff; }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+.btn-secondary:hover { background: var(--sand); color: var(--ink); }
+.btn-dark { background: var(--ink); color: #fff; }
+.btn-dark:hover { background: #3A332E; color: #fff; }
+.btn:disabled, .btn[aria-disabled="true"] { background: #CFC5B8; color: #3D3631; border-color: transparent; transform: none; }
+.btn-lg { min-height: 64px; border-radius: 18px; font-size: 17px; }
+.btn-block { width: 100%; }
+
+/* ===== Form ===== */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > label, .label { font-size: 14px; font-weight: 600; }
+.input { width: 100%; min-height: 52px; padding: 0 16px; border: 1.5px solid var(--line-strong); border-radius: 14px; background: var(--surface); color: var(--ink); font: 500 16px var(--body); }
+.input:hover { border-color: #BFB09A; }
+.check { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; }
+.check:hover { border-color: var(--line-strong); }
+.check input { flex: none; width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); }
+.check strong { display: block; font-size: 15px; }
+.check small { display: block; font-size: 13px; line-height: 1.4; color: var(--muted); }
+
+/* ===== Komponen ===== */
+.card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 20px; padding: 20px; }
+.msg { min-height: 1.5em; margin: 0; font-size: 14px; }
+.msg[data-type="error"] { color: var(--danger); }
+.msg[data-type="ok"] { color: var(--ok); }
+.chip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #EFE6D8; color: #5A5047; }
+.chip-ok { background: var(--ok-bg); color: var(--ok); }
+.chip-dark { background: var(--ink); color: #fff; }
+/* Kartu acara: nama + tanggal room, dipakai di halaman Tamu dan pratinjau */
+.event { background: var(--sand); border-radius: 20px; padding: 18px 20px; }
+.event .name { margin: 2px 0 0; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; letter-spacing: -0.5px; }
+.event .date { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.empty { display: grid; place-items: center; gap: 8px; min-height: 220px; padding: 24px; text-align: center; border: 2px dashed var(--line-strong); border-radius: 20px; color: var(--muted); }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Layout satu layar 16:9 (gabung, Tamu, masuk Host): dua kolom, menumpuk di HP ===== */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; }
+.split > * { min-width: 0; padding: clamp(24px, 5vw, 72px); display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+.split .panel { background: var(--accent); color: #fff; }
+.split .panel .display em { color: #fff; }
+@media (max-width: 860px) {
+  .split { grid-template-columns: 1fr; min-height: 0; }
+  .split > * { padding: 24px 16px; justify-content: flex-start; }
+}
+
+/* ===== Layout Host: sidebar + isi ===== */
+.shell { display: flex; min-height: 100vh; }
+.side { flex: 0 0 240px; background: var(--sand); padding: 28px 20px; display: flex; flex-direction: column; gap: 28px; }
+.side nav { display: flex; flex-direction: column; gap: 6px; }
+.nav { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 14px; border-radius: 14px; color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: none; }
+.nav:hover { background: #E8DDCC; color: var(--ink); }
+.nav[aria-current="page"] { background: var(--ink); color: #fff; }
+.side .who { margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.content { flex: 1; min-width: 0; padding: 32px 40px; display: flex; flex-direction: column; gap: 24px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.page-head .display { font-size: 40px; }
+@media (max-width: 860px) {
+  .shell { flex-direction: column; }
+  .side { flex: none; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; }
+  .side nav { flex-direction: row; flex-wrap: wrap; }
+  .side .who { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
+  .content { padding: 20px 16px; }
+  .page-head .display { font-size: 32px; }
+}

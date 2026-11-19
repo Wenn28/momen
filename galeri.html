@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Galeri Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .wrap { max-width: 1600px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 48px) 120px; display: flex; flex-direction: column; gap: 24px; }
+    .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+    /* Susunan kolom bertingkat (masonry): foto tegak dan mendatar tampil utuh tanpa dipotong */
+    .masonry { columns: 4 240px; column-gap: 12px; }
+    .masonry a { display: block; margin: 0 0 12px; break-inside: avoid; border-radius: 16px; overflow: hidden; background: var(--sand); }
+    .masonry a:hover img { opacity: .9; }
+    .masonry img { width: 100%; height: auto; }
+    .fab { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(420px, calc(100vw - 32px)); box-shadow: 0 8px 20px rgba(35, 31, 28, .18); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div style="display: flex; align-items: center; gap: 14px">
+        <a class="btn btn-secondary" id="back" aria-label="Kembali ke halaman kirim foto" style="width: 48px; padding: 0">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </a>
+        <div>
+          <h1 class="display" id="roomName" style="font-size: clamp(28px, 3.4vw, 40px)">Galeri</h1>
+          <p class="muted" id="roomDate" style="margin: 2px 0 0; font-size: 14px"></p>
+        </div>
+      </div>
+      <p class="eyebrow" id="count" aria-live="polite">Diperbarui langsung</p>
+    </header>
+
+    <main>
+      <div class="empty" id="state"><div class="spinner" aria-hidden="true"></div><p style="margin: 0">Memuat foto…</p></div>
+      <div class="masonry" id="grid" hidden></div>
+    </main>
+  </div>
+
+  <a class="btn btn-primary btn-lg fab" id="add">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    Tambah foto
+  </a>
+
+  <script type="module">
+    import { signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { auth, db, $, roomParam, loadRoom, formatDate, driveImg } from "./app.js";
+
+    const code = roomParam();
+    $("back").href = $("add").href = `tamu.html?r=${code}`;
+
+    // Ganti isi area kosong (memuat / kosong / error)
+    function setState(text, isError = false) {
+      $("grid").hidden = true;
+      $("state").hidden = false;
+      const p = document.createElement("p");
+      p.style.margin = "0";
+      p.textContent = text;
+      if (isError) p.style.color = "var(--danger)";
+      $("state").replaceChildren(p);
+    }
+
+    // Kartu foto dipakai ulang antar snapshot agar gambar tidak dimuat ulang
+    const cards = new Map();
+    function cardFor(id, photo) {
+      if (!cards.has(id)) {
+        const a = document.createElement("a");
+        a.href = driveImg(photo.fileId, 2000);
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.setAttribute("aria-label", "Buka foto ukuran penuh");
+        const img = Object.assign(document.createElement("img"), { src: driveImg(photo.fileId, 600), alt: "Foto tamu", loading: "lazy", width: 600, height: 450 });
+        img.style.aspectRatio = "auto 4 / 3";
+        a.append(img);
+        cards.set(id, a);
+      }
+      return cards.get(id);
+    }
+
+    try {
+      const room = await loadRoom(code);
+      if (!room) setState("Room tidak ditemukan.", true);
+      else if (!room.guestGallery) {
+        $("roomName").textContent = room.name;
+        setState("Host menutup galeri untuk room ini. Fotomu tetap terkirim ke Host.");
+      } else {
+        document.title = `Galeri: ${room.name}`;
+        $("roomName").textContent = room.name;
+        $("roomDate").textContent = formatDate(room.date);
+
+        onAuthStateChanged(auth, (user) => {
+          if (!user) { signInAnonymously(auth).catch((e) => setState("Gagal masuk: " + e.message, true)); return; }
+          // 60 foto tampil terbaru; Tamu hanya boleh membaca foto yang tidak disembunyikan
+          const q = query(collection(db, "rooms", code, "photos"), where("hidden", "==", false), orderBy("createdAt", "desc"), limit(60));
+          onSnapshot(q, (snap) => {
+            if (snap.empty) { setState("Belum ada foto. Jadilah yang pertama!"); $("count").textContent = "0 foto"; return; }
+            $("state").hidden = true;
+            $("grid").hidden = false;
+            $("count").textContent = snap.size >= 60 ? "60 foto terbaru" : `${snap.size} foto`;
+            $("grid").replaceChildren(...snap.docs.map((d) => cardFor(d.id, d.data())));
+          }, (err) => setState("Gagal memuat galeri: " + err.message, true));
+        });
+      }
+    } catch (e) {
+      setState("Gagal memuat room: " + e.message, true);
+    }
+  </script>
+</body>
+</html>

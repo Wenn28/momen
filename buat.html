@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Momen: Buat Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .layout { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+    .layout form { flex: 999 1 440px; min-width: 0; max-width: 620px; display: flex; flex-direction: column; gap: 20px; }
+    .row2 { display: flex; flex-wrap: wrap; gap: 16px; }
+    .row2 > * { flex: 1 1 200px; }
+    .preview { flex: 1 1 300px; max-width: 380px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 24px; }
+    .preview .card { display: flex; flex-direction: column; gap: 14px; border-radius: 24px; }
+    .fake-btn { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 14px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <a class="brand" href="index.html">momen<span>.</span></a>
+      <nav aria-label="Menu Host">
+        <a class="nav" href="host.html">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></svg>
+          Room saya
+        </a>
+        <a class="nav" href="buat.html" aria-current="page">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Buat room
+        </a>
+      </nav>
+      <div class="who"><span id="who"></span><button class="btn btn-secondary" id="btnLogout" type="button">Keluar</button></div>
+    </aside>
+
+    <main class="content">
+      <div>
+        <a href="host.html" style="display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none">&larr; Kembali ke Room saya</a>
+        <h1 class="display" style="font-size: 40px">Buat room baru</h1>
+      </div>
+
+      <div class="layout">
+        <form id="form" novalidate>
+          <div class="field">
+            <label for="name">Nama acara</label>
+            <input class="input" id="name" maxlength="80" placeholder="Contoh: Pernikahan Rina dan Budi" required>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="date">Tanggal</label>
+              <input class="input" id="date" type="date">
+            </div>
+            <div class="field">
+              <label for="location">Lokasi <span class="muted" style="font-weight: 500">(opsional)</span></label>
+              <input class="input" id="location" maxlength="120" placeholder="Nama gedung atau kota">
+            </div>
+          </div>
+          <div class="field">
+            <label for="quota">Kuota foto per tamu</label>
+            <select class="input" id="quota">
+              <option value="5">5 foto</option>
+              <option value="10" selected>10 foto</option>
+              <option value="20">20 foto</option>
+              <option value="50">50 foto</option>
+              <option value="100">100 foto</option>
+            </select>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span class="label">Pengaturan tamu</span>
+            <label class="check" for="guestGallery">
+              <input id="guestGallery" type="checkbox" checked>
+              <span><strong>Tamu boleh melihat galeri</strong><small>Tamu bisa membuka semua foto yang sudah tampil.</small></span>
+            </label>
+            <label class="check" for="requireApproval">
+              <input id="requireApproval" type="checkbox">
+              <span><strong>Setujui foto sebelum tampil</strong><small>Foto baru disembunyikan sampai kamu menyetujuinya di halaman kelola room.</small></span>
+            </label>
+          </div>
+          <p class="muted" style="margin: 0; font-size: 14px">Pengaturan ini belum bisa diubah setelah room dibuat.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <button class="btn btn-primary btn-lg" id="btnCreate" type="submit" style="padding: 0 28px">Buat room</button>
+            <a class="btn btn-secondary btn-lg" href="host.html">Batal</a>
+          </div>
+          <p class="msg" id="msg" role="status" aria-live="polite"></p>
+        </form>
+
+        <!-- Pratinjau: berubah langsung saat form diisi -->
+        <aside class="preview" aria-label="Pratinjau halaman tamu">
+          <p class="eyebrow">Pratinjau halaman tamu</p>
+          <div class="card">
+            <div class="event">
+              <p class="eyebrow">Room baru</p>
+              <p class="name" id="pvName">Nama acara</p>
+              <p class="date" id="pvDate">Tanggal acara</p>
+            </div>
+            <div class="fake-btn" style="background: var(--accent); color: #fff">Foto sekarang</div>
+            <div class="fake-btn" style="border: 1.5px solid var(--line-strong)">Pilih dari galeri</div>
+            <p class="muted" id="pvQuota" style="margin: 0; font-size: 14px"></p>
+          </div>
+          <p class="muted" style="margin: 0; font-size: 14px">Setelah room dibuat, kode room dan kartu QR langsung siap dibagikan.</p>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { db, $, showMsg, requireHost, newRoomCode, formatDate } from "./app.js";
+
+    // Pratinjau mengikuti isi form
+    function preview() {
+      $("pvName").textContent = $("name").value.trim() || "Nama acara";
+      $("pvDate").textContent = [formatDate($("date").value), $("location").value.trim()].filter(Boolean).join(" · ") || "Tanggal acara";
+      $("pvQuota").textContent = `Tiap tamu bisa mengirim ${$("quota").value} foto.`;
+    }
+    ["name", "date", "location", "quota"].forEach((id) => $(id).addEventListener("input", preview));
+    preview();
+
+    requireHost(async (user) => {
+      // Email belum diizinkan: form dikunci dengan penjelasan
+      const allowed = await getDoc(doc(db, "hosts", (user.email || "").toLowerCase())).then((s) => s.exists()).catch(() => false);
+      if (!allowed || !user.emailVerified) {
+        $("btnCreate").disabled = true;
+        showMsg($("msg"), user.emailVerified
+          ? "Emailmu belum diizinkan membuat room. Minta pemilik Momen menambahkannya ke daftar Host."
+          : "Verifikasi emailmu dulu di halaman Room saya.", "error");
+        return;
+      }
+
+      $("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = $("name").value.trim();
+        if (!name) { showMsg($("msg"), "Isi nama acara dulu.", "error"); $("name").focus(); return; }
+        $("btnCreate").disabled = true;
+        showMsg($("msg"), "Membuat room…");
+        try {
+          // Cari kode yang belum dipakai (bentrok sangat jarang, dicoba maks 5 kali)
+          let code = null;
+          for (let i = 0; i < 5 && !code; i++) {
+            const c = newRoomCode();
+            if (!(await getDoc(doc(db, "rooms", c))).exists()) code = c;
+          }
+          if (!code) throw new Error("Tidak menemukan kode kosong, coba lagi.");
+          await setDoc(doc(db, "rooms", code), {
+            ownerUid: user.uid,
+            name,
+            date: $("date").value,
+            location: $("location").value.trim(),
+            quota: Number($("quota").value),
+            requireApproval: $("requireApproval").checked,
+            guestGallery: $("guestGallery").checked,
+            createdAt: serverTimestamp(),
+          });
+          location.href = `kelola.html?r=${code}`;
+        } catch (err) {
+          showMsg($("msg"), "Gagal membuat room: " + err.message, "error");
+          $("btnCreate").disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
