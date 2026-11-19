@@ -107,7 +107,7 @@
 
   <script type="module">
     import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { db, $, showMsg, requireHost, newRoomCode, formatDate } from "./app.js";
+    import { auth, db, $, showMsg, requireHost, newRoomCode, formatDate } from "./app.js";
 
     // Pratinjau mengikuti isi form
     function preview() {
@@ -140,10 +140,13 @@
             if (!(await getDoc(doc(db, "rooms", c))).exists()) code = c;
           }
           if (!code) throw new Error("Tidak menemukan kode kosong, coba lagi.");
+          // Sesi bisa berganti di tab lain (mis. halaman Tamu masuk anonim setelah Host keluar); pakai sesi yang aktif sekarang
+          const host = auth.currentUser;
+          if (!host || host.isAnonymous) { location.replace("host.html"); return; }
           // Token lama bisa masih membawa email_verified=false walau email sudah diverifikasi; rules membaca token
-          await user.getIdToken(true);
+          await host.getIdToken(true);
           await setDoc(doc(db, "rooms", code), {
-            ownerUid: user.uid,
+            ownerUid: host.uid,
             name,
             date: $("date").value,
             location: $("location").value.trim(),
