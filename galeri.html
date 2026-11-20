@@ -13,9 +13,17 @@
     .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
     /* Susunan kolom bertingkat (masonry): foto tegak dan mendatar tampil utuh tanpa dipotong */
     .masonry { columns: 4 240px; column-gap: 12px; }
-    .masonry a { display: block; margin: 0 0 12px; break-inside: avoid; border-radius: 16px; overflow: hidden; background: var(--sand); }
-    .masonry a:hover img { opacity: .9; }
+    .masonry button { display: block; width: 100%; margin: 0 0 12px; padding: 0; border: 0; break-inside: avoid; border-radius: 16px; overflow: hidden; background: var(--sand); }
+    .masonry button:hover img { opacity: .9; }
     .masonry img { width: 100%; height: auto; }
+    /* Menyulitkan simpan foto: tanpa menu tekan lama (iOS), tanpa seret, tanpa seleksi. Screenshot tetap tidak bisa dicegah. */
+    .masonry img, .viewer img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+    /* Penampil foto besar di dalam halaman, pengganti link ke file asli */
+    .viewer { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 16px; border: 0; background: rgba(20, 17, 15, .94); }
+    .viewer::backdrop { background: transparent; }
+    .viewer[open] { display: grid; place-items: center; }
+    .viewer img { max-width: 100%; max-height: calc(100vh - 32px); width: auto; height: auto; border-radius: 12px; }
+    .viewer .close { position: fixed; top: 16px; right: 16px; width: 48px; padding: 0; }
     .fab { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(420px, calc(100vw - 32px)); box-shadow: 0 8px 20px rgba(35, 31, 28, .18); }
   </style>
 </head>
@@ -39,6 +47,13 @@
       <div class="masonry" id="grid" hidden></div>
     </main>
   </div>
+
+  <dialog class="viewer" id="viewer" aria-label="Foto tamu">
+    <img id="viewerImg" alt="Foto tamu ukuran besar" draggable="false">
+    <button class="btn btn-secondary close" id="viewerClose" type="button" aria-label="Tutup foto">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </dialog>
 
   <a class="btn btn-primary btn-lg fab" id="add">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -64,19 +79,27 @@
       $("state").replaceChildren(p);
     }
 
+    // Tamu tidak diberi jalan mudah mengunduh: klik kanan dan seret gambar dimatikan di seluruh halaman
+    for (const ev of ["contextmenu", "dragstart"]) {
+      document.addEventListener(ev, (e) => { if (e.target.tagName === "IMG") e.preventDefault(); });
+    }
+
+    // Foto dibesarkan di dalam halaman (dialog), tanpa link ke file Drive aslinya; Escape menutup dialog
+    $("viewerClose").onclick = () => $("viewer").close();
+    $("viewer").onclick = (e) => { if (e.target === $("viewer")) $("viewer").close(); };
+    $("viewer").onclose = () => { $("viewerImg").removeAttribute("src"); };
+
     // Kartu foto dipakai ulang antar snapshot agar gambar tidak dimuat ulang
     const cards = new Map();
     function cardFor(id, photo) {
       if (!cards.has(id)) {
-        const a = document.createElement("a");
-        a.href = driveImg(photo.fileId, 2000);
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.setAttribute("aria-label", "Buka foto ukuran penuh");
-        const img = Object.assign(document.createElement("img"), { src: driveImg(photo.fileId, 600), alt: "Foto tamu", loading: "lazy", width: 600, height: 450 });
+        const b = Object.assign(document.createElement("button"), { type: "button" });
+        b.setAttribute("aria-label", "Perbesar foto");
+        const img = Object.assign(document.createElement("img"), { src: driveImg(photo.fileId, 600), alt: "", loading: "lazy", width: 600, height: 450, draggable: false });
         img.style.aspectRatio = "auto 4 / 3";
-        a.append(img);
-        cards.set(id, a);
+        b.append(img);
+        b.onclick = () => { $("viewerImg").src = driveImg(photo.fileId, 1200); $("viewer").showModal(); };
+        cards.set(id, b);
       }
       return cards.get(id);
     }
