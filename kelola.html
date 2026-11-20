@@ -99,6 +99,11 @@
               <button class="btn btn-dark" id="btnCopy" type="button" style="min-height: 40px; padding: 0 14px; font-size: 14px">Salin</button>
             </div>
             <p class="muted" style="margin: 0; font-size: 14px">Tamu cukup scan QR, atau buka halaman utama Momen dan ketik kode room. Tidak perlu akun.</p>
+            <label class="check" id="downloadBox" hidden>
+              <input type="checkbox" id="guestDownload">
+              <span><strong>Tamu boleh mengunduh foto</strong><small>Berlaku langsung di Galeri Tamu. Saat mati, tombol unduh, klik kanan, dan tekan lama foto ditutup. Screenshot tidak bisa dicegah.</small></span>
+            </label>
+            <p class="msg" id="downloadMsg" role="status" aria-live="polite"></p>
           </aside>
         </div>
       </div>
@@ -197,6 +202,20 @@
         $("guestLink").textContent = guestUrl(code);
         $("sHiddenLabel").textContent = $("tabHidden").textContent = hiddenWord();
         $("qr").innerHTML = qrSvg(guestUrl(code));
+        // Izin unduh hanya relevan bila galeri dibuka; room lama tanpa field ini dianggap tidak boleh
+        $("downloadBox").hidden = !room.guestGallery;
+        $("guestDownload").checked = room.guestDownload === true;
+        $("guestDownload").onchange = async (e) => {
+          const on = e.target.checked;
+          e.target.disabled = true;
+          try {
+            await updateDoc(doc(db, "rooms", code), { guestDownload: on });
+            showMsg($("downloadMsg"), on ? "Tamu sekarang bisa mengunduh foto." : "Unduh foto untuk Tamu ditutup.", "ok");
+          } catch (err) {
+            e.target.checked = !on;
+            showMsg($("downloadMsg"), "Gagal menyimpan: " + err.message, "error");
+          } finally { e.target.disabled = false; }
+        };
         $("state").hidden = true;
         $("roomView").hidden = false;
 

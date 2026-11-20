@@ -29,6 +29,10 @@ service cloud.firestore {
         && request.resource.data.requireApproval is bool
         && request.resource.data.guestGallery is bool
         && request.resource.data.createdAt == request.time;
+      // Host pemilik hanya boleh mengubah izin unduh Tamu; pengaturan lain tetap terkunci
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guestDownload'])
+        && request.resource.data.guestDownload is bool;
 
       // Foto: Host pemilik room melihat semua; Tamu hanya yang tampil, dan hanya bila galeri dibuka
       match /photos/{photoId} {
